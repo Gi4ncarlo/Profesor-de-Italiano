@@ -12,19 +12,65 @@ export const StudentStatsPage = (navigate, user) => {
         recentActivity: []
     };
 
+    let filter = 'Tutte';
+    let statusFilter = 'Tutti';
+    let filteredActivity = [];
+
+    const groupActivityByMonth = (activities) => {
+        const groups = {};
+        activities.forEach(act => {
+            const date = new Date(act.date);
+            const monthYear = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+            if (!groups[monthYear]) groups[monthYear] = [];
+            groups[monthYear].push(act);
+        });
+        return groups;
+    };
+
+    const applyFilter = () => {
+        let results = studentData.recentActivity;
+
+        // Type Filter
+        if (filter !== 'Tutte') {
+            const map = {
+                'Traduzioni': ['translation', 'translation_choice'],
+                'Ordina Frase': ['order_sentence'],
+                'Scelta Multipla': ['fill_choice'],
+                'Esercizi': ['fill', 'error_correction', 'dictation', 'memory', 'lessico', 'completare'],
+                'Lessico': ['flashcard', 'flashcards'],
+                'Conversazione': ['roleplay'],
+                'Velocità': ['speed']
+            };
+            const targets = map[filter] || [];
+            results = results.filter(act => targets.includes(act.type?.toLowerCase()));
+        }
+
+        // Status Filter
+        if (statusFilter !== 'Tutti') {
+            const statusMap = {
+                'Completati': 'COMPLETED',
+                'Da Correggere': 'NEEDS_REVIEW',
+                'In Svolgimento': 'PENDING'
+            };
+            results = results.filter(act => act.status === statusMap[statusFilter]);
+        }
+
+        filteredActivity = results;
+    };
+
     const loadStudentData = async () => {
         try {
             console.log("Caricamento profilo allievo...");
             // Use case-insensitive role match to avoid missing 'Student' vs 'student'
             let { data: profileData, error: profileErr } = await supabase
                 .from('profiles').select('*').ilike('role', 'student').limit(1).maybeSingle();
-            
+
             if (!profileData || profileErr) {
-                 // Fallback: get any profile that isn't the teacher
-                 const { data: allProfs } = await supabase.from('profiles').select('*');
-                 if (allProfs) {
-                     profileData = allProfs.find(p => p.role?.toLowerCase() === 'student' || p.id !== user.id);
-                 }
+                // Fallback: get any profile that isn't the teacher
+                const { data: allProfs } = await supabase.from('profiles').select('*');
+                if (allProfs) {
+                    profileData = allProfs.find(p => p.role?.toLowerCase() === 'student' || p.id !== user.id);
+                }
             }
 
             if (profileData && profileData.id !== user.id) {
@@ -53,15 +99,15 @@ export const StudentStatsPage = (navigate, user) => {
                 studentData.stats.completed = 0;
                 studentData.stats.pendingReview = 0;
                 const activityFeed = [];
-                
+
                 assignments.forEach(assign => {
                     const submissions = assign.submissions || [];
                     const isSubmitted = submissions.length > 0;
                     const hasFeedback = isSubmitted && submissions.some(s => s.feedback && s.feedback.length > 0);
-                    
+
                     if (hasFeedback) studentData.stats.completed++;
                     if (isSubmitted && !hasFeedback) studentData.stats.pendingReview++;
-                    
+
                     if (assign.tasks) {
                         activityFeed.push({
                             task_id: assign.tasks.id, title: assign.tasks.title,
@@ -72,6 +118,7 @@ export const StudentStatsPage = (navigate, user) => {
                     }
                 });
                 studentData.recentActivity = activityFeed;
+                applyFilter();
             }
         } catch (err) { console.error("Error loading stats:", err); }
         finally { isLoading = false; renderView(); }
@@ -109,7 +156,7 @@ export const StudentStatsPage = (navigate, user) => {
                     ${studentData.avatar_url ? '<img src="' + studentData.avatar_url + '">' : studentData.name.charAt(0)}
                 </div>
                 <h2 class="stats-student-name">${studentData.name}</h2>
-                <div class="stats-student-role">ALLIEVO DELL'ATELIER</div>
+                <div class="stats-student-role">ALLIEVO DEL LABORATORIO</div>
                 ${studentData.joined_at ? '<div class="stats-joined">Ha iniziato il cammino: ' + new Date(studentData.joined_at).toLocaleDateString('it-IT') + '</div>' : ''}
                 <div class="stats-grid">
                     <div class="stats-box" style="background: white; border-color: rgba(166, 77, 50, 0.08);">
@@ -125,8 +172,7 @@ export const StudentStatsPage = (navigate, user) => {
                         <div class="stats-box__label">In attesa del tuo sigillo ✒️</div>
                     </div>
                 </div>
-                
-                <button id="btn-delete-account" style="margin-top: 3rem; width: 100%; border: 1px solid rgba(220, 53, 69, 0.2); background: transparent; color: #dc3545; padding: 1.2rem; border-radius: 12px; font-family: var(--font-titles); font-size: 1.2rem; cursor: pointer; transition: all 0.3s;">
+                          <button id="btn-delete-account" style="margin-top: 3rem; width: 100%; border: 1px solid rgba(220, 53, 69, 0.2); background: transparent; color: #dc3545; padding: 1.2rem; border-radius: 12px; font-family: var(--font-titles); font-size: 1.2rem; cursor: pointer; transition: all 0.3s;">
                     Elimina Account Allievo
                 </button>
             </div>
@@ -134,33 +180,103 @@ export const StudentStatsPage = (navigate, user) => {
 
         // RIGHT: Activity feed
         const rightCol = document.createElement('div');
-        let html = '<h3 class="stats-section-title">Cronaca dell\'Apprendimento</h3>';
+        let html = `
+            <h3 class="stats-section-title">Cronaca dell'Apprendimento</h3>
+            
+            <div style="margin-bottom: 2rem;">
+                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem;">Filtra per Stato</div>
+                <div class="status-filters" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    ${['Tutti', 'Completati', 'Da Correggere', 'In Svolgimento'].map(s => `
+                        <button class="status-chip ${statusFilter === s ? 'active' : ''}" data-status="${s}" style="
+                            padding: 0.7rem 1.4rem; border-radius: 12px; border: 1.5px solid ${statusFilter === s ? 'var(--color-ink)' : 'rgba(0,0,0,0.06)'};
+                            background: ${statusFilter === s ? 'var(--color-ink)' : 'white'};
+                            color: ${statusFilter === s ? 'white' : 'var(--color-ink)'};
+                            font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.05em;
+                            cursor: pointer; transition: all 0.3s;
+                        ">
+                            ${s}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
 
-        if (studentData.recentActivity.length === 0) {
-            html += '<div class="stats-empty">Ancora nessuna impronta...</div>';
+            <div style="margin-bottom: 3.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem;">Filtra per Tipologia</div>
+                <div class="history-filters" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    ${['Tutte', 'Traduzioni', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(f => `
+                        <button class="filter-chip ${filter === f ? 'active' : ''}" data-filter="${f}" style="
+                            padding: 0.7rem 1.4rem; border-radius: 20px; border: 1.5px solid ${filter === f ? 'var(--color-terracota)' : 'rgba(0,0,0,0.06)'};
+                            background: ${filter === f ? 'var(--color-terracota)' : 'white'};
+                            color: ${filter === f ? 'white' : 'var(--color-ink)'};
+                            font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.05em;
+                            cursor: pointer; transition: all 0.3s;
+                        ">
+                            ${f}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        if (filteredActivity.length === 0) {
+            html += '<div class="stats-empty">Nessun capitolo trovato con questi filtri. 🔎</div>';
         } else {
-            studentData.recentActivity.forEach((act, idx) => {
-                let badgeClass = 'stats-badge--pending', badgeText = 'IN SVOLGIMENTO';
-                if (act.status === 'COMPLETED') { badgeClass = 'stats-badge--completed'; badgeText = 'COMPLETATO ✓'; }
-                else if (act.status === 'NEEDS_REVIEW') { badgeClass = 'stats-badge--review'; badgeText = 'DA CORREGGERE ✒️'; }
-                html += `
-                    <div class="stats-activity-row" data-task-id="${act.task_id}">
-                        <div>
-                            <div style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 0.5rem;">
-                                <span class="stats-badge ${badgeClass}">${badgeText}</span>
-                                <span style="font-family: var(--font-ui); font-size: 1rem; font-weight: 900; opacity: 0.25; text-transform: uppercase; letter-spacing: 0.08em;">${act.type}</span>
+            const groups = groupActivityByMonth(filteredActivity);
+            Object.keys(groups).forEach(month => {
+                html += `<div class="month-header" style="
+                    margin-top: 4rem; margin-bottom: 2rem; padding-bottom: 1rem;
+                    border-bottom: 1px solid rgba(0,0,0,0.05);
+                    font-family: var(--font-titles); font-size: 1.4rem; color: var(--color-terracota); font-weight: 700;
+                    text-transform: capitalize;
+                ">${month}</div>`;
+
+                groups[month].forEach(act => {
+                    let badgeClass = 'stats-badge--pending', badgeText = 'IN SVOLGIMENTO';
+                    if (act.status === 'COMPLETED') { badgeClass = 'stats-badge--completed'; badgeText = 'COMPLETATO'; }
+                    else if (act.status === 'NEEDS_REVIEW') { badgeClass = 'stats-badge--review'; badgeText = 'DA CORREGGERE'; }
+
+                    html += `
+                        <div class="stats-activity-row compact" data-task-id="${act.task_id}" style="
+                            padding: 1.4rem 2rem; margin-bottom: 1rem; border-radius: 14px;
+                            display: flex; justify-content: space-between; align-items: center;
+                            background: white; border: 1.2px solid rgba(0,0,0,0.02);
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+                            cursor: pointer;
+                        ">
+                            <div style="flex: 1;">
+                                <div style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 0.3rem;">
+                                    <span class="stats-badge ${badgeClass}" style="font-size: 0.75rem; padding: 0.3rem 0.8rem; border-radius: 6px;">${badgeText}</span>
+                                    <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 900; opacity: 0.2; text-transform: uppercase;">${act.type}</span>
+                                </div>
+                                <h4 style="font-family: var(--font-titles); font-size: 1.4rem; margin: 0; color: var(--color-ink); font-weight: 500;">${act.title}</h4>
                             </div>
-                            <h4 style="font-family: var(--font-titles); font-size: 1.6rem; margin: 0; color: var(--color-ink); font-weight: 500;">${act.title}</h4>
+                            <div style="text-align: right; opacity: 0.5;">
+                                <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 850;">${new Date(act.date).getDate()} ${month.split(' ')[0]}</div>
+                                <div style="font-family: var(--font-body); font-size: 1rem;">${new Date(act.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-family: var(--font-ui); font-size: 1.05rem; font-weight: 850; opacity: 0.35;">${new Date(act.date).toLocaleDateString('it-IT')}</div>
-                            <div style="font-family: var(--font-body); font-size: 1.2rem; opacity: 0.4; margin-top: 0.2rem;">${new Date(act.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
             });
         }
         rightCol.innerHTML = html;
+
+        rightCol.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.onclick = () => {
+                filter = btn.dataset.filter;
+                applyFilter();
+                renderView();
+            };
+        });
+
+        rightCol.querySelectorAll('.status-chip').forEach(btn => {
+            btn.onclick = () => {
+                statusFilter = btn.dataset.status;
+                applyFilter();
+                renderView();
+            };
+        });
+
         rightCol.querySelectorAll('.stats-activity-row').forEach(row => {
             row.onclick = () => navigate('/task/' + row.dataset.taskId);
         });
@@ -174,7 +290,7 @@ export const StudentStatsPage = (navigate, user) => {
         if (btnDeleteAcc) {
             btnDeleteAcc.onclick = async () => {
                 if (!studentData.id) return alert("Nessun account allievo trovato.");
-                const conf = confirm(`Attenzione Giancarlo!\n\nStai per eliminare definitivamente l'account di ${studentData.name} e tutto il suo storico di apprendimento.\n\nQuesta azione non può essere annullata. Vuoi davvero procedere?`);
+                const conf = confirm(`Attenzione Giancarlo!\n\nStai per eliminare definitivamente l'account di ${studentData.name} e tutto il suo storico di aprendizaje.\n\nQuesta azione non puede essere annullata. Vuoi davvero procedere?`);
                 if (conf) {
                     try {
                         const { error } = await supabase.auth.admin?.deleteUser(studentData.id) || await supabase.from('profiles').delete().eq('id', studentData.id);

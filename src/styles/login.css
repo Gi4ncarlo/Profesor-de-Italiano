@@ -111,3 +111,29 @@
   opacity: 0.3; font-size: 1.4rem; padding: 0.5rem; transition: opacity 0.3s;
   background: none; border: none;
 }
+
+@media (max-width: 768px) {
+  .login-card {
+    padding: 4rem 3rem;
+    border-radius: 2.5rem;
+  }
+  .login-title {
+    font-size: 2.6rem;
+  }
+  .login-title__highlight {
+    font-size: 2.8rem;
+  }
+  .login-btn {
+    padding: 1.4rem 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 3rem 2rem;
+    border-radius: 2rem;
+  }
+  .login-root {
+    padding: 1.5rem;
+  }
+}

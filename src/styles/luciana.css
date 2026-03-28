@@ -73,9 +73,21 @@
   font-family: var(--font-body); font-size: 1rem; font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;
 }
-.luciana-badge--pending { background: rgba(122, 139, 90, 0.1); color: var(--color-oliva); }
-.luciana-badge--submitted { background: #f0f4e8; color: #6b7a4d; }
-.luciana-badge--reviewed { background: var(--color-parchment); color: #5B4E3E; opacity: 0.6; }
+.luciana-badge--pending { 
+    background: #fffbeb; 
+    color: #b45309; 
+    border: 1px solid rgba(180, 83, 9, 0.1);
+}
+.luciana-badge--submitted { 
+    background: #eff6ff; 
+    color: #1e40af; 
+    border: 1px solid rgba(30, 64, 175, 0.1);
+}
+.luciana-badge--reviewed { 
+    background: #f0fdf4; 
+    color: #15803d; 
+    border: 1px solid rgba(21, 128, 61, 0.1);
+}
 
 /* Progress ring */
 .luciana-progress-wrap {

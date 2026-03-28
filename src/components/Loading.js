@@ -4,8 +4,8 @@
 export const LoadingSkeleton = (count = 3) => {
     const list = document.createElement('div');
     list.style.cssText = `display: flex; flex-direction: column; gap: 2rem; width: 100%;`;
-    
-    for(let i=0; i<count; i++) {
+
+    for (let i = 0; i < count; i++) {
         const item = document.createElement('div');
         item.style.cssText = `
             height: 120px; background: rgba(0,0,0,0.03); border-radius: 4px;

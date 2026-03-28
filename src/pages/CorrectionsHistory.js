@@ -71,10 +71,11 @@ export const CorrectionsHistoryPage = (navigate, user) => {
         if (filter === 'Tutte') {
             filteredCorrections = corrections;
         } else {
-            // Simplified mapping for the Pills
             const map = {
                 'Traduzioni': ['translation', 'translation_choice'],
-                'Esercizi': ['fill', 'fill_choice', 'order_sentence', 'error_correction', 'dictation', 'memory'],
+                'Ordina Frase': ['order_sentence'],
+                'Scelta Multipla': ['fill_choice'],
+                'Esercizi': ['fill', 'error_correction', 'dictation', 'memory'],
                 'Lessico': ['flashcard', 'flashcards'],
                 'Conversazione': ['roleplay'],
                 'Velocità': ['speed']
@@ -198,14 +199,14 @@ export const CorrectionsHistoryPage = (navigate, user) => {
             </div>
 
             <!-- FILTERS -->
-            <div style="display: flex; gap: 1.2rem; justify-content: center; margin-bottom: 5rem;">
-                ${['Tutte', 'Traduzioni', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(p => `
+            <div class="filters-container" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 5rem; flex-wrap: wrap;">
+                ${['Tutte', 'Traduzioni', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(p => `
                     <button class="pill-filter ${filter === p ? 'active' : ''}" data-val="${p}" style="
-                        padding: 1rem 2.8rem; border-radius: 50px; border: 1.5px solid ${filter === p ? 'var(--color-bordo)' : 'rgba(0,0,0,0.06)'};
+                        padding: 0.8rem 1.8rem; border-radius: 50px; border: 1.5px solid ${filter === p ? 'var(--color-bordo)' : 'rgba(0,0,0,0.06)'};
                         background: ${filter === p ? 'var(--color-bordo)' : 'white'};
                         color: ${filter === p ? 'white' : 'var(--color-ink)'};
-                        font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.1em;
-                        cursor: pointer; transition: all 0.25s;
+                        font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.08em;
+                        cursor: pointer; transition: all 0.25s; white-space: nowrap; flex-shrink: 0;
                     ">${p}</button>
                 `).join('')}
             </div>

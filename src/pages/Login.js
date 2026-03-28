@@ -38,7 +38,7 @@ export const LoginPage = (navigate) => {
                 ` : ''}
 
                 <div>
-                    <label class="login-label">Identità Atelier (Email)</label>
+                    <label class="login-label">La tua Identità (Email)</label>
                     <input type="email" id="email" class="login-input" placeholder="giancarlo@luci.it" required>
                 </div>
 
@@ -52,7 +52,7 @@ export const LoginPage = (navigate) => {
 
                 <div style="margin-top: 2rem;">
                     <button type="submit" class="login-btn" id="btn-submit">
-                        <span>${mode === 'login' ? 'Entra nell\'Atelier' : 'Crea Identità'}</span>
+                        <span>${mode === 'login' ? 'Inizia a Studiare' : 'Crea Identità'}</span>
                         <span>✨</span>
                     </button>
                     <button type="button" id="toggle-mode" class="login-toggle">
@@ -112,7 +112,7 @@ export const LoginPage = (navigate) => {
             } catch (err) {
                 console.error("[Login Error]", err);
                 const msg = err.message.includes('Invalid login credentials') ? 'Codice o Identità non validi.' :
-                           err.message.includes('User already registered') ? 'Questa email ha già un Atelier.' :
+                           err.message.includes('User already registered') ? 'Email già registrata.' :
                            "Ops, c'è stato un problema técnico.";
                 toast.show(msg, "error");
                 loader.style.display = 'none';

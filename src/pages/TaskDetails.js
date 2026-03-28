@@ -18,7 +18,7 @@ const TYPE_TRANSLATIONS = {
 };
 
 /**
- * TASK DETAILS PAGE - "IL REGISTRO DELL'ATELIER"
+ * TASK DETAILS PAGE - "IL REGISTRO DIDATTICO"
  */
 export const TaskDetailsPage = (navigate, user, params) => {
     const container = document.createElement('div');
@@ -75,6 +75,17 @@ export const TaskDetailsPage = (navigate, user, params) => {
         .content-it { font-family: var(--font-titles); font-size: 1.2rem; min-width: 45%; color: var(--color-ink); }
         .content-arrow { opacity: 0.2; font-size: 0.8rem; padding-top: 0.3rem; }
         .content-es { font-family: var(--font-body); font-size: 1.1rem; color: var(--color-ink); opacity: 0.7; }
+        
+        @media (max-width: 768px) {
+            .details-nav { padding: 1.5rem 2.5rem; }
+            .details-main { grid-template-columns: 1fr; padding: 3rem 2rem; gap: 4rem; }
+            .task-info-hero { position: static; padding: 3rem 2.5rem; }
+            .submission-card { padding: 3rem 2.5rem; }
+            .submission-card > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 2rem; }
+            .response-box { padding: 2.5rem; }
+            .history-title { font-size: 2.4rem; }
+            .btn-feedback { width: 100%; padding: 1.5rem 2rem; }
+        }
     `;
     document.head.appendChild(styles);
 
@@ -97,8 +108,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 const pendingSub = submissions.find(s => s.status === 'submitted');
                 if (pendingSub) {
                     console.log(`Auto-reviewing ${type} task...`);
-                    let feedbackMsg = "Letto e registrato nell'Atelier. Ottimo lavoro! ✨";
-                    if (type === 'order_sentence') feedbackMsg = "Ottimo lavoro con l'ordinamento delle frasi! Ho registrato i tuoi progressi nell'Atelier. ✨";
+                    let feedbackMsg = "Letto e registrato. Ottimo lavoro! ✨";
+                    if (type === 'order_sentence') feedbackMsg = "Ottimo lavoro con l'ordinamento delle frasi! Ho registrato i tuoi progressi. ✨";
                     else if (type === 'speed') feedbackMsg = "Record di velocità registrato! Continua così. ⚡";
 
                     // We don't await this to keep the UI fast, but we fire the update
@@ -365,7 +376,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
                     ${!isCorrect && correctStr ? `
                         <div style="padding: 2.5rem; background: #f0fdf4; border-radius: 18px; border: 1.5px solid rgba(22, 163, 74, 0.15); margin-top: 1rem;">
-                            <span class="ui-label" style="color: #166534; opacity: 0.6; margin-bottom: 1rem;">SOLUZIONE ATELIER 💡</span>
+                            <span class="ui-label" style="color: #166534; opacity: 0.6; margin-bottom: 1rem;">SOLUZIONE CORRETTA 💡</span>
                             <div class="font-editorial" style="font-size: 2rem; color: #14532d; opacity: 1;">
                                 "${correctStr}"
                             </div>
@@ -446,7 +457,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
         nav.className = 'details-nav';
         nav.innerHTML = `
             <button class="btn-back" id="btn-back"><span>←</span> RITORNA</button>
-            <div style="font-family: var(--font-titles); font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em;">Registro <span style="font-style: italic; color: var(--color-terracota);">Atelier</span></div>
+            <div style="font-family: var(--font-titles); font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em;">Registro <span style="font-style: italic; color: var(--color-terracota);">Didattico</span></div>
             <div style="width: 45px; height: 45px; background: var(--color-ink); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-family: var(--font-titles);">${user.name.charAt(0)}</div>
         `;
         nav.querySelector('#btn-back').onclick = () => navigate('/dashboard');

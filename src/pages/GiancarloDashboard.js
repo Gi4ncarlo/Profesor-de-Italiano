@@ -24,8 +24,7 @@ const TYPE_TRANSLATIONS = {
 
 export const GiancarloDashboard = (navigate, user) => {
     const container = document.createElement('div');
-    container.className = 'dashboard-root';
-    container.style.cssText = 'display:flex; min-height:100vh; background-color:var(--color-parchment); padding-left: 28rem; padding-right: 2rem; overflow-x: hidden;';
+    container.className = 'dashboard-container';
 
     let cType = 'roleplay';
     let tasks = [];
@@ -356,7 +355,7 @@ export const GiancarloDashboard = (navigate, user) => {
 
         sidebar.innerHTML = `
             <div>
-                <div class="atelier-sidebar__brand">Atelier di <em>Lingue</em></div>
+                <div class="atelier-sidebar__brand">Laboratorio <em>Lingue</em></div>
                 <nav>
                     <button class="sidebar-nav-btn active">🏠 REGISTRO</button>
                     <div class="sidebar-section-label">GESTIONE</div>
@@ -390,7 +389,7 @@ export const GiancarloDashboard = (navigate, user) => {
                     <header class="teacher-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4rem;">
                         <div>
                             <h1>Bentornato, Maestro Giancarlo.</h1>
-                            <p>LA TUA BOTTEGA DIDATTICA DI OGGI</p>
+                            <p>LA TUA CLASSE DI OGGI</p>
                         </div>
 
                         <div style="position: relative; margin-top: 0.5rem;">
@@ -640,39 +639,88 @@ export const GiancarloDashboard = (navigate, user) => {
         const taskListDiv = main.querySelector('#tasks-list');
         if (isLoading) taskListDiv.appendChild(LoadingSkeleton(5));
         else {
-            tasks.forEach((task, index) => {
-                const card = document.createElement('div');
-                card.className = 'teacher-task-card';
-                card.style.animationDelay = `${index * 0.05}s`;
-                let sColor = 'var(--color-terracota)', bColor = 'white', sText = 'In sospeso', showDot = false;
-                const lowerType = task.type?.toLowerCase();
-                if (task.computedStatus === 'TO REVIEW') { sText = 'DA CORREGGERE ✒️'; sColor = 'white'; bColor = 'var(--color-terracota)'; showDot = true; }
-                else if (task.computedStatus === 'COMPLETED') { sText = 'COMPLETATO ✓'; sColor = '#065f46'; bColor = '#ecfdf5'; }
-                card.innerHTML = `<div style="flex:1; display:flex; align-items:center; gap:2.5rem;">${showDot ? '<div class="notif-dot"></div>' : '<div style="width:0.9rem;"></div>'}<div><div style="display:flex; gap:1rem; align-items:center; margin-bottom:0.6rem;"><span style="font-family:var(--font-ui); font-size:1rem; font-weight:950; opacity:0.3; letter-spacing:0.15em; text-transform:uppercase;">${TYPE_TRANSLATIONS[lowerType] || task.type}</span><span style="background:${bColor}; color:${sColor}; padding:0.3rem 1.2rem; border-radius:0.6rem; font-family:var(--font-ui); font-size:0.95rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.02);">${sText}</span></div><h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5></div></div><div style="display:flex; align-items:center; gap:1.5rem; opacity:0.3;" class="task-actions"><div style="font-size:1.1rem; font-family:var(--font-ui); font-weight:850;">${new Date(task.created_at).toLocaleDateString('it-IT')}</div>${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">✏️</button>` : ''}<button class="btn-delete-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🗑️</button></div>`;
-                card.onclick = () => navigate(`/task/${task.id}`);
-                const btnD = card.querySelector('.btn-delete-task'); if (btnD) btnD.onclick = (e) => { e.stopPropagation(); confirmModal.show("Vuoi eliminare?", `Sei sicuro di voler eliminare "${task.title}"?`, task.id); };
-                const btnE = card.querySelector('.btn-edit-task'); if (btnE) btnE.onclick = (e) => {
-                    e.stopPropagation(); editTaskId = task.id; const lType = task.type?.toLowerCase();
-                    if (lType.includes('role')) cType = 'roleplay'; else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard'; else if (lType === 'fill_choice') cType = 'fill_choice'; else if (lType === 'order_sentence') cType = 'order_sentence'; else if (lType === 'translation_choice') cType = 'translation_choice'; else if (lType === 'error_correction') cType = 'error_correction'; else if (lType === 'translation') cType = 'translation'; else if (lType === 'speed') cType = 'speed'; else cType = 'fill';
+            const groupTasksByDate = (taskList) => {
+                const groups = {};
+                taskList.forEach(t => {
+                    const d = new Date(t.created_at);
+                    const today = new Date();
+                    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
                     
-                    if (cType === 'flashcard') flashcards = task.content?.items || [];
-                    else if (cType === 'fill_choice') { fillChoices = task.content?.gaps || []; fcText = task.content?.text || ""; }
-                    else if (cType === 'translation_choice') { const opts = task.content?.options || []; tcOptions = opts.map(t => ({ text: t })); const cor = opts.indexOf(task.content?.correct); tcCorrect = cor !== -1 ? String(cor) : ''; }
-                    else if (cType === 'fill') fillSentences = task.content?.sentences || [{ id: Date.now(), text: task.content?.text || '', blank: '', source: 'manual', editMode: true }];
-                    else if (cType === 'translation') { transPairs = task.content?.pairs || []; transDir = task.content?.direction || 'it-es'; }
-                    else if (cType === 'speed') { speedPairs = task.content?.words || []; speedDir = task.content?.direction || 'it-es'; }
-                    render();
-                    setTimeout(() => {
-                        const tInp = container.querySelector('#task-title'); if (tInp) tInp.value = task.title;
-                        const rD = container.querySelector('#rp-desc'); if (cType === 'roleplay' && rD) rD.value = task.content?.description || '';
-                        const ft = container.querySelector('#fill-text'); if (cType === 'fill' && ft) ft.value = task.content?.text || '';
-                        const os = container.querySelector('#os-text'); if (cType === 'order_sentence' && os) os.value = task.content?.original || '';
-                        const tcQ = container.querySelector('#tc-question'); if (cType === 'translation_choice' && tcQ) tcQ.value = task.content?.question || '';
-                        const ecI = container.querySelector('#ec-incorrect'); const ecC = container.querySelector('#ec-correct'); if (cType === 'error_correction' && ecI && ecC) { ecI.value = task.content?.incorrect || ''; ecC.value = task.content?.correct || ''; }
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }, 50);
-                };
-                taskListDiv.appendChild(card);
+                    let label = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+                    if (d.toDateString() === today.toDateString()) label = "Oggi";
+                    else if (d.toDateString() === yesterday.toDateString()) label = "Ieri";
+                    
+                    if (!groups[label]) groups[label] = [];
+                    groups[label].push(t);
+                });
+                return groups;
+            };
+
+            const groups = groupTasksByDate(tasks);
+            Object.keys(groups).forEach((dateLabel, gIdx) => {
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'task-list-date-group';
+                dateHeader.style = 'margin: 4rem 0 2rem; display: flex; align-items: center; gap: 1.5rem;';
+                dateHeader.innerHTML = `
+                    <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; white-space: nowrap; opacity: 0.8;">${dateLabel}</span>
+                    <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(166, 77, 50, 0.15), transparent);"></div>
+                `;
+                taskListDiv.appendChild(dateHeader);
+
+                groups[dateLabel].forEach((task, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'teacher-task-card';
+                    card.style.animationDelay = `${(gIdx * 3 + index) * 0.05}s`;
+                    let sColor = 'var(--color-terracota)', bColor = 'white', sText = 'In sospeso', showDot = false;
+                    const lowerType = task.type?.toLowerCase();
+                    if (task.computedStatus === 'TO REVIEW') { sText = 'DA CORREGGERE ✒️'; sColor = 'white'; bColor = 'var(--color-terracota)'; showDot = true; }
+                    else if (task.computedStatus === 'COMPLETED') { sText = 'COMPLETATO ✓'; sColor = '#065f46'; bColor = '#ecfdf5'; }
+                    
+                    card.innerHTML = `
+                        <div style="flex:1; display:flex; align-items:center; gap:2.5rem;">
+                            ${showDot ? '<div class="notif-dot"></div>' : '<div style="width:0.9rem;"></div>'}
+                            <div>
+                                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:0.6rem;">
+                                    <span style="font-family:var(--font-ui); font-size:1rem; font-weight:950; opacity:0.3; letter-spacing:0.15em; text-transform:uppercase;">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
+                                    <span style="background:${bColor}; color:${sColor}; padding:0.3rem 1.2rem; border-radius:0.6rem; font-family:var(--font-ui); font-size:0.95rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.02);">${sText}</span>
+                                </div>
+                                <h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1.5rem; opacity:0.33;" class="task-actions">
+                            <div style="font-size:1.1rem; font-family:var(--font-ui); font-weight:850;">${new Date(task.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+                            ${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">✏️</button>` : ''}
+                            <button class="btn-delete-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🗑️</button>
+                        </div>
+                    `;
+                    
+                    card.onclick = () => navigate(`/task/${task.id}`);
+                    const btnD = card.querySelector('.btn-delete-task'); 
+                    if (btnD) btnD.onclick = (e) => { e.stopPropagation(); confirmModal.show("Vuoi eliminare?", `Sei sicuro di voler eliminare "${task.title}"?`, task.id); };
+                    const btnE = card.querySelector('.btn-edit-task'); 
+                    if (btnE) btnE.onclick = (e) => {
+                        e.stopPropagation(); editTaskId = task.id; const lType = task.type?.toLowerCase();
+                        if (lType.includes('role')) cType = 'roleplay'; else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard'; else if (lType === 'fill_choice') cType = 'fill_choice'; else if (lType === 'order_sentence') cType = 'order_sentence'; else if (lType === 'translation_choice') cType = 'translation_choice'; else if (lType === 'error_correction') cType = 'error_correction'; else if (lType === 'translation') cType = 'translation'; else if (lType === 'speed') cType = 'speed'; else cType = 'fill';
+                        
+                        if (cType === 'flashcard') flashcards = task.content?.items || [];
+                        else if (cType === 'fill_choice') { fillChoices = task.content?.gaps || []; fcText = task.content?.text || ""; }
+                        else if (cType === 'translation_choice') { const opts = task.content?.options || []; tcOptions = opts.map(t => ({ text: t })); const cor = opts.indexOf(task.content?.correct); tcCorrect = cor !== -1 ? String(cor) : ''; }
+                        else if (cType === 'fill') fillSentences = task.content?.sentences || [{ id: Date.now(), text: task.content?.text || '', blank: '', source: 'manual', editMode: true }];
+                        else if (cType === 'translation') { transPairs = task.content?.pairs || []; transDir = task.content?.direction || 'it-es'; }
+                        else if (cType === 'speed') { speedPairs = task.content?.words || []; speedDir = task.content?.direction || 'it-es'; }
+                        render();
+                        setTimeout(() => {
+                            const tInp = container.querySelector('#task-title'); if (tInp) tInp.value = task.title;
+                            const rD = container.querySelector('#rp-desc'); if (cType === 'roleplay' && rD) rD.value = task.content?.description || '';
+                            const ft = container.querySelector('#fill-text'); if (cType === 'fill' && ft) ft.value = task.content?.text || '';
+                            const os = container.querySelector('#os-text'); if (cType === 'order_sentence' && os) os.value = task.content?.original || '';
+                            const tcQ = container.querySelector('#tc-question'); if (cType === 'translation_choice' && tcQ) tcQ.value = task.content?.question || '';
+                            const ecI = container.querySelector('#ec-incorrect'); const ecC = container.querySelector('#ec-correct'); if (cType === 'error_correction' && ecI && ecC) { ecI.value = task.content?.incorrect || ''; ecC.value = task.content?.correct || ''; }
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }, 50);
+                    };
+                    taskListDiv.appendChild(card);
+                });
             });
         }
 

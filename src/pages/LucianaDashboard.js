@@ -27,7 +27,7 @@ const RANDOM_QUOTES = [
 
 export const LucianaDashboard = (navigate, user) => {
     const container = document.createElement('div');
-    container.style.cssText = 'display:flex; min-height:100vh; background-color:var(--color-parchment); padding-left: 28rem; padding-right: 2rem;';
+    container.className = 'dashboard-container';
 
     let assignments = [];
     let isLoading = true;
@@ -143,7 +143,7 @@ export const LucianaDashboard = (navigate, user) => {
         sidebar.style.setProperty('--profile-accent', 'var(--color-bordo)');
         sidebar.innerHTML = `
             <div>
-                <div class="atelier-sidebar__brand">El Rincón de <em>Luci</em></div>
+                <div class="atelier-sidebar__brand">L'Angolo di <em>Luci</em></div>
                 <nav>
                     <button class="sidebar-nav-btn active" id="btn-nav-dashboard">🏠 DASHBOARD</button>
                     <button class="sidebar-nav-btn" id="btn-nav-cuaderno">📓 IL MIO QUADERNO</button>
@@ -205,7 +205,7 @@ export const LucianaDashboard = (navigate, user) => {
                         <div>
                             <span class="luciana-date">Oggi è ${itDate}</span>
                             <h1>Benvenuta, ${user.name}. <span class="luciana-lucky-badge">★ 4</span></h1>
-                            <p>IL TUO ATELIER DELL'ITALIANO</p>
+                            <p>IL TUO ANGOLO DELL'ITALIANO</p>
                         </div>
                         
                         <div style="position: relative; margin-top: 1rem;">
@@ -225,7 +225,7 @@ export const LucianaDashboard = (navigate, user) => {
                     </header>
                     
                     <div class="luciana-tabs">
-                        <button class="luciana-tab ${currentTab === 'pending' ? 'active' : ''}" id="tab-pending">Atelier di Oggi</button>
+                        <button class="luciana-tab ${currentTab === 'pending' ? 'active' : ''}" id="tab-pending">Lezioni di Oggi</button>
                         <button class="luciana-tab ${currentTab === 'history' ? 'active' : ''}" id="tab-history">Registro Storico</button>
                     </div>
 

@@ -55,7 +55,7 @@ export const ReviewModal = (onReview) => {
 
         overlay.querySelector('#closeReview').onclick = close;
         overlay.querySelector('.modal-close').onclick = close;
-        
+
         const submitBtn = overlay.querySelector('#review-submit');
         if (submitBtn) {
             submitBtn.onclick = async () => {

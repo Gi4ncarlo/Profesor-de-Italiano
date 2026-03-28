@@ -4,6 +4,7 @@ import './styles/login.css';
 import './styles/giancarlo.css';
 import './styles/luciana.css';
 import './styles/student-stats.css';
+import './styles/responsive.css';
 
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
