@@ -1,22 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Dancing+Script:wght@400;500;600;700&family=Libre+Franklin:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 /* ─── DESIGN TOKENS ─── */
 :root {
-  --color-parchment: #fcf9f4;
-  --color-ink: #1c1c19;
-  --color-terracota: #43191a;
-  --color-dorado-viejo: #755b00;
-  --color-crema-oscuro: #f0ede9;
+  --color-parchment: #F5EDD8;
+  --color-ink: #1C0F07;
+  --color-terracota: #C4603A;
+  --color-dorado-viejo: #C49A3C;
+  --color-oliva: #7A8B5A;
+  --color-crema-oscuro: #EADCBE;
   --color-bordo: #6B1024;
+  --color-espresso: #2A1A0E;
   --color-text-main: #2c2c2c;
   
   --shadow-premium: 0 20px 50px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
-  --shadow-hover: 0 30px 60px rgba(67, 25, 26, 0.12);
-  --shadow-card: 0 4px 20px rgba(0,0,0,0.03);
+  --shadow-hover: 0 30px 60px rgba(44, 26, 14, 0.12);
+  --shadow-card: 0 2px 8px rgba(44,26,14,0.08), 0 0 0 1px rgba(44,26,14,0.06);
   --glass: rgba(255, 255, 255, 0.92);
   
-  --font-heading: "Playfair Display", serif;
-  --font-body: "Inter", sans-serif;
+  --font-heading: "Cormorant Garamond", serif;
+  --font-body: "Libre Franklin", sans-serif;
   --font-handwritten: 'Dancing Script', cursive;
   
   /* Legacy mapping support */
@@ -51,19 +53,31 @@ body {
 /* ─── TYPOGRAPHY HIERARCHY ─── */
 h1, .h1 {
   font-family: var(--font-heading);
-  font-size: clamp(3.2rem, 5vw, 4rem);
-  font-weight: 600;
+  font-size: clamp(3rem, 5vw, 4rem);
+  font-weight: 700;
   letter-spacing: -0.5px;
   color: var(--color-ink);
-  line-height: 1.2;
+  line-height: 1;
 }
 
-h2, .h2 {
+h2, .h2, .subtitle {
   font-family: var(--font-heading);
   font-size: clamp(2.4rem, 4vw, 2.8rem);
   font-weight: 500;
+  font-style: italic;
   color: var(--color-ink);
   line-height: 1.3;
+}
+
+blockquote, .quote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 2.22rem;
+  color: var(--color-terracota);
+  padding: 2rem 3rem;
+  border-left: 5px solid var(--color-terracota);
+  margin: 2rem 0;
+  opacity: 0.85;
 }
 
 h3, .h3 {
@@ -154,86 +168,125 @@ input, textarea, select {
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+/* ─── COUTURE NOTIFICATIONS ─── */
 .notification-dropdown {
-  position: absolute; top: 100%; right: 0;
-  width: 38rem; max-height: 50rem;
-  background: white;
-  border-radius: 2.2rem;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.12);
-  border: 1px solid rgba(0,0,0,0.06);
-  margin-top: 1.5rem;
-  z-index: 1000;
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  animation: coutureScaleIn 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    position: absolute !important;
+    top: calc(100% + 1rem) !important;
+    right: 0 !important;
+    width: 380px !important;
+    max-height: 550px !important;
+    background: white !important;
+    border-radius: 2.4rem !important;
+    box-shadow: 0 25px 50px -12px rgba(28, 15, 7, 0.15) !important;
+    z-index: 9999 !important;
+    display: none; /* Controlled by .active */
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(28, 15, 7, 0.05) !important;
+    animation: coutureScaleIn 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
-.notification-dropdown.active { display: flex; }
+
+.notification-dropdown.active {
+    display: flex !important;
+}
 
 .notification-header {
-  padding: 2rem 2.8rem;
-  border-bottom: 1px solid rgba(0,0,0,0.03);
-  font-family: var(--font-ui);
-  font-weight: 950;
-  font-size: 0.85rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-ink);
-  opacity: 0.4;
-  display: flex; justify-content: space-between; align-items: center;
+    padding: 2.2rem 2.8rem !important;
+    border-bottom: 1.5px solid rgba(28, 15, 7, 0.03) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: #fffcf9 !important;
+}
+
+.notification-header span:first-child {
+    font-family: var(--font-ui) !important;
+    font-weight: 950 !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0.2em !important;
+    text-transform: uppercase !important;
+    color: var(--color-ink) !important;
+}
+
+#clear-all {
+    font-family: var(--font-ui) !important;
+    font-size: 0.75rem !important;
+    font-weight: 850 !important;
+    text-transform: uppercase !important;
+    color: var(--color-bordo) !important;
+    opacity: 0.6 !important;
+    cursor: pointer !important;
 }
 
 .notification-list {
-  overflow-y: auto;
-  flex: 1;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+    background: white !important;
 }
 
 .notification-item {
-  padding: 2rem 2.5rem;
-  display: flex; align-items: flex-start; gap: 1.8rem;
-  border-bottom: 1px solid rgba(0,0,0,0.02);
-  transition: all 0.3s;
-  cursor: pointer;
-  position: relative;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 2rem !important;
+    padding: 2.2rem 2.8rem !important;
+    border-bottom: 1px solid rgba(28, 15, 7, 0.04) !important;
+    transition: background 0.3s ease !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
 }
-.notification-item:hover { background: #fdfaf4; }
-.notification-item.unread { background: #fffcf8; }
-.notification-item.unread::before {
-  content: ''; position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%);
-  width: 6px; height: 6px; border-radius: 50%; background: var(--color-terracota);
+
+.notification-item:hover {
+    background: #fdfaf4 !important;
+}
+
+.notification-item.unread {
+    background: #fffcf7 !important;
 }
 
 .notification-icon {
-  width: 4rem; height: 4rem;
-  border-radius: 12px;
-  background: var(--color-crema-oscuro);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.6rem;
-  flex-shrink: 0;
+    width: 4.2rem !important;
+    height: 4.2rem !important;
+    border-radius: 14px !important;
+    background: #F5EDD8 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.6rem !important;
+    flex-shrink: 0 !important;
 }
 
 .notification-info {
-  flex: 1;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
+
 .notification-text {
-  font-family: var(--font-body);
-  font-size: 1.35rem;
-  color: var(--color-ink);
-  line-height: 1.4;
-  margin-bottom: 0.5rem;
+    font-family: var(--font-body) !important;
+    font-size: 1.35rem !important;
+    color: var(--color-ink) !important;
+    line-height: 1.4 !important;
+    font-weight: 500 !important;
 }
+
 .notification-time {
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-  opacity: 0.35;
-  font-weight: 750;
+    font-family: var(--font-ui) !important;
+    font-size: 0.75rem !important;
+    opacity: 0.5 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
 }
 
 .notification-empty {
-  padding: 5rem 3rem;
-  text-align: center;
-  font-family: var(--font-handwritten);
-  font-size: 2.2rem;
-  color: var(--color-ink);
-  opacity: 0.3;
+    padding: 6rem 3rem !important;
+    text-align: center !important;
+    font-family: var(--font-handwritten) !important;
+    font-size: 2.2rem !important;
+    opacity: 0.2 !important;
 }

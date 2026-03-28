@@ -40,6 +40,17 @@ export const createTaskWithAssignment = async ({ title, type, content, studentId
             .select().single();
 
         if (assignErr) throw assignErr;
+        
+        // D. Create Notification for Student
+        try {
+            await createNotification({
+                recipientId: studentId,
+                type: 'new_assignment',
+                taskId: task.id
+            });
+        } catch (nErr) {
+            console.warn("Notification not created:", nErr);
+        }
 
         return { data: { ...task, assignment: assign }, error: null };
     } catch (err) {

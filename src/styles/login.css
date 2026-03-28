@@ -67,7 +67,7 @@
 
 .login-btn {
   width: 100%;
-  background: linear-gradient(135deg, var(--color-terracota) 0%, #6B1024 100%);
+  background: linear-gradient(135deg, var(--color-terracota) 0%, var(--color-bordo) 100%);
   color: white; border: none;
   padding: 1.4rem 3rem; border-radius: 50px;
   font-family: var(--font-ui); font-size: 1.2rem; font-weight: 800;

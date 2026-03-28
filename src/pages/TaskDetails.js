@@ -11,7 +11,10 @@ const TYPE_TRANSLATIONS = {
     'flashcard': 'Lessico',
     'order_sentence': 'Ordina Frase',
     'translation_choice': 'Traduzione',
-    'error_correction': 'Correzione'
+    'error_correction': 'Correzione',
+    'dictation': '🎧 Dettato',
+    'memory': '🃏 Memoria',
+    'speed': '⚡ Velocità'
 };
 
 /**
@@ -37,7 +40,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
         .details-main { padding: 5rem 6.5rem; max-width: 140rem; margin: 0 auto; width: 100%; flex: 1; display: grid; grid-template-columns: 1.6fr 1fr; gap: 6rem; align-items: start; }
         
         .task-info-hero { background: white; border-radius: 30px; padding: 4rem; box-shadow: var(--shadow-premium); border: 1px solid rgba(0,0,0,0.01); margin-bottom: 3.5rem; position: sticky; top: 1.5rem; }
-        .history-title { font-family: var(--font-titles); font-size: 2.8rem; margin-bottom: 3rem; border-bottom: 1.5px solid rgba(0,0,0,0.05); padding-bottom: 1.5rem; color: var(--color-ink); }
+        .history-title { font-family: var(--font-heading); font-size: 2.8rem; font-weight: 500; font-style: italic; margin-bottom: 3rem; border-bottom: 1.5px solid rgba(0,0,0,0.05); padding-bottom: 1.5rem; color: var(--color-ink); }
 
         .submission-card { background: white; border-radius: 30px; padding: 4rem; box-shadow: var(--shadow-card); margin-bottom: 3rem; border: 1.5px solid rgba(0,0,0,0.01); transition: all 0.4s; }
         .submission-card:hover { transform: translateY(-4px); box-shadow: 0 15px 45px rgba(0,0,0,0.04); }
@@ -58,6 +61,20 @@ export const TaskDetailsPage = (navigate, user, params) => {
         .btn-feedback:hover { background: var(--color-terracota); transform: translateY(-3px); box-shadow: 0 15px 35px rgba(166, 77, 50, 0.3); }
         
         .ui-label { font-family: var(--font-ui); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; opacity: 0.4; margin-bottom: 1.2rem; display: block; }
+        
+        /* Status Badge */
+        .status-badge { display: inline-flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1.8rem; border-radius: 50px; font-family: var(--font-ui); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2.5rem; }
+        .status-pending { background: #fef3c7; color: #92400e; border: 1.5px solid rgba(146, 64, 14, 0.1); }
+        .status-submitted { background: #dcfce7; color: #166534; border: 1.5px solid rgba(22, 101, 52, 0.1); }
+        .status-reviewed { background: #eff6ff; color: #1e40af; border: 1.5px solid rgba(30, 64, 175, 0.1); }
+
+        /* Task Content Preview */
+        .content-preview { background: #fffdfa; border: 1px dashed rgba(0,0,0,0.1); border-radius: 20px; padding: 2.5rem; margin-top: 2rem; }
+        .content-item { display: flex; align-items: flex-start; gap: 1.5rem; padding: 1.2rem 0; border-bottom: 1px solid rgba(0,0,0,0.03); }
+        .content-item:last-child { border-bottom: none; }
+        .content-it { font-family: var(--font-titles); font-size: 1.2rem; min-width: 45%; color: var(--color-ink); }
+        .content-arrow { opacity: 0.2; font-size: 0.8rem; padding-top: 0.3rem; }
+        .content-es { font-family: var(--font-body); font-size: 1.1rem; color: var(--color-ink); opacity: 0.7; }
     `;
     document.head.appendChild(styles);
 
@@ -71,6 +88,31 @@ export const TaskDetailsPage = (navigate, user, params) => {
             if (sRes.error) throw sRes.error;
             task = tRes.data;
             submissions = sRes.data;
+
+            // --- AUTO-REVIEW LOGIC for Auto-correct Tasks ---
+            const type = task.type?.toLowerCase();
+            const isAutoCorrect = ['flashcard', 'flashcards', 'lessico', 'order_sentence', 'translation_choice', 'error_correction', 'speed'].includes(type);
+            
+            if (isAutoCorrect && submissions.length > 0) {
+                const pendingSub = submissions.find(s => s.status === 'submitted');
+                if (pendingSub) {
+                    console.log(`Auto-reviewing ${type} task...`);
+                    let feedbackMsg = "Letto e registrato nell'Atelier. Ottimo lavoro! ✨";
+                    if (type === 'order_sentence') feedbackMsg = "Ottimo lavoro con l'ordinamento delle frasi! Ho registrato i tuoi progressi nell'Atelier. ✨";
+                    else if (type === 'speed') feedbackMsg = "Record di velocità registrato! Continua così. ⚡";
+
+                    // We don't await this to keep the UI fast, but we fire the update
+                    addFeedback({ 
+                        submissionId: pendingSub.id, 
+                        comment: feedbackMsg 
+                    }).then(() => {
+                        // Silently refresh the local state to show 'reviewed'
+                        pendingSub.status = 'reviewed';
+                        pendingSub.review_comment = feedbackMsg;
+                        render();
+                    });
+                }
+            }
         } catch (err) {
             console.error(err);
             toast.show("Errore di rete.", "error");
@@ -129,7 +171,42 @@ export const TaskDetailsPage = (navigate, user, params) => {
             return h;
         }
 
-        // 2. ROLEPLAY / CONVERSAZIONE (Check by property)
+        // 2. MULTI-ITEM TRANSLATION (Tatoeba-style)
+        if (type === 'translation' || type === 'traduzione' || task.content?.pairs || task.content?.items) {
+            const items = task.content?.pairs || task.content?.items || [];
+            // Robust answer extraction
+            let studentAnswers = [];
+            try {
+                const raw = sub.answers || sub.content;
+                studentAnswers = typeof raw === 'string' ? JSON.parse(raw) : (raw?.data || raw || []);
+                if (!Array.isArray(studentAnswers)) studentAnswers = [studentAnswers];
+            } catch(e) {
+                studentAnswers = [];
+            }
+
+            return items.map((item, idx) => {
+                const originalText = item.it || item.italiano || item.text || "Senza testo";
+                const studentTranslation = studentAnswers[idx] || "";
+                
+                return `
+                    <div style="margin-bottom: 2.5rem; padding: 2.5rem; background: #fffcf8; border-radius: 20px; border: 1.5px solid rgba(0,0,0,0.03);">
+                        <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.2rem; opacity: 0.5;">FRASE ORIGINALE (ITALIANO)</div>
+                        <div style="font-family: var(--font-heading); font-size: 2rem; color: var(--color-ink); margin-bottom: 2rem; padding-left: 1.5rem; border-left: 3.5px solid var(--color-terracota);">
+                            "${originalText}"
+                        </div>
+                        
+                        <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.2rem; opacity: 0.5;">TRADUZIONE DI LUCI</div>
+                        <div style="padding: 2.5rem; background: white; border: 2.5px solid ${studentTranslation ? 'rgba(0,0,0,0.05)' : '#dc2626'}; border-radius: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
+                            <div class="font-editorial" style="font-size: 2.35rem; color: var(--color-ink); line-height: 1.2;">
+                                ${studentTranslation ? `"${studentTranslation}"` : '<span style="opacity:0.3; font-style: italic;">Nessuna risposta nel capitolo...</span>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 3. ROLEPLAY / CONVERSAZIONE (Check by property)
         if (type?.includes('role') || type?.includes('conversazione') || task.content?.description || task.content?.dialogue) {
             let h = `<div style="display: flex; flex-direction: column; gap: 2.5rem;">`;
             
@@ -174,27 +251,33 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
         // 4. ORDER SENTENCE
         if (type?.includes('order') || task.content?.type === 'order_sentence') {
-            const correctWords = task.content?.correctOrder || [];
+            const correctText = task.content?.text || task.content?.correct_sentence || "";
+            const correctWords = task.content?.correctOrder || (correctText ? correctText.split(/\s+/) : []);
             const studentWords = Array.isArray(answers) ? answers : (answers?.data || []);
-            const isCorrect = JSON.stringify(studentWords) === JSON.stringify(correctWords);
+            
+            const clean = (s) => String(s || "").toLowerCase().replace(/[.,!?;]/g, '').trim();
+            const isCorrect = studentWords.length === correctWords.length && studentWords.every((w, i) => clean(w) === clean(correctWords[i]));
 
             return `
                 <div style="display: flex; flex-direction: column; gap: 2.5rem;">
                     <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-                        ${studentWords.map((w, i) => `
-                            <div style="
-                                padding: 1.2rem 2.2rem; background: white; border-radius: 12px;
-                                border: 2px solid ${w === correctWords[i] ? '#10b981' : '#ef4444'};
-                                font-family: var(--font-body); font-size: 1.6rem; color: var(--color-ink);
-                                box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-                            ">${w}</div>
-                        `).join('')}
+                        ${studentWords.map((w, i) => {
+                            const isWordCorrect = correctWords[i] && clean(w) === clean(correctWords[i]);
+                            return `
+                                <div style="
+                                    padding: 1.2rem 2.2rem; background: white; border-radius: 12px;
+                                    border: 2px solid ${isWordCorrect ? '#10b981' : '#ef4444'};
+                                    font-family: var(--font-body); font-size: 1.6rem; color: var(--color-ink);
+                                    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+                                ">${w}</div>
+                            `;
+                        }).join('')}
                     </div>
                     ${!isCorrect ? `
                         <div style="margin-top: 2rem; padding: 2.5rem; background: #ecfdf5; border-radius: 18px; border: 1.5px solid rgba(16, 185, 129, 0.1);">
                             <span class="ui-label" style="color: #065f46; opacity: 0.6; margin-bottom: 0.8rem;">ORDINE CORRETTO 💡</span>
                             <div class="font-editorial" style="font-size: 2rem; color: #064e3b; line-height: 1.3;">
-                                "${correctWords.join(' ')}"
+                                "${correctText || correctWords.join(' ')}"
                             </div>
                         </div>
                     ` : `
@@ -292,6 +375,62 @@ export const TaskDetailsPage = (navigate, user, params) => {
             `;
         }
 
+        // 7. SPEED (VELOCITY)
+        if (type === 'speed' || task.content?.type === 'speed') {
+            let data = { score: 0, completedIndices: [] };
+            try {
+                const src = answers?.data || answers;
+                if (typeof src === 'string' && src.startsWith('{')) {
+                    data = JSON.parse(src);
+                } else if (typeof src === 'object' && src !== null) {
+                    data = src;
+                } else {
+                    data = { score: Number(src) || 0, completedIndices: [] };
+                }
+            } catch(e) {
+                data = { score: Number(answers) || 0, completedIndices: [] };
+            }
+            
+            const words = task.content?.words || [];
+            const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
+            const score = data.score || completedIndices.length;
+            const isPerfect = completedIndices.length === words.length && words.length > 0;
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 3rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: end;">
+                        <div>
+                            <span class="ui-label" style="color: var(--color-ink); opacity: 0.6; margin-bottom: 0.8rem;">RISULTATO VELOCITÀ ⚡</span>
+                            <div class="font-editorial" style="font-size: 3.5rem; color: var(--color-terracota); font-weight: 800;">
+                                ${score} <span style="font-size: 1.8rem; font-weight: 400; opacity: 0.5; color: var(--color-ink);">parole corrette</span>
+                            </div>
+                        </div>
+                        ${isPerfect ? `
+                            <div style="background: #f0fdf4; padding: 1rem 2rem; border-radius: 50px; border: 1.5px solid #16a34a; color: #166534; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase;">
+                                ✨ Record Perfetto ✨
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem;">
+                        ${words.map((w, i) => {
+                            const isDone = completedIndices.includes(Number(i));
+                            const color = isDone ? '#10b981' : '#ef4444';
+                            const bgColor = isDone ? '#f0fdf4' : '#fff1f2';
+                            return `
+                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1px solid ${color}33; display: flex; flex-direction: column; gap: 0.4rem;">
+                                    <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.4; text-transform: uppercase;">${task.content.direction === 'it-es' ? 'Italiano' : 'Spagnolo'}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink); font-weight: 600;">${task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
+                                    <div style="height: 1px; background: ${color}22; margin: 0.4rem 0;"></div>
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: ${color}; font-weight: 800;">${task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div style="font-family: var(--font-body); font-size: 1.5rem; color: var(--color-ink); line-height: 1.6;">
                 <div style="opacity: 0.4; font-family: var(--font-ui); font-size: 0.8rem; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">Detalle Risposta</div>
@@ -324,79 +463,151 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         console.log("Rendering Task:", task);
-        console.log("Submissions:", submissions);
+        console.log("Submissions/Assignments:", submissions);
 
         const historyCol = document.createElement('div');
         historyCol.innerHTML = `
-            <h3 class="history-title">Consegne</h3>
-            <div id="submissions-list">
-                ${submissions.length === 0 ? `<div style="padding: 10rem; text-align: center; font-family: var(--font-handwritten); font-size: 2.5rem; opacity: 0.2;">Al calamaio...</div>` : ''}
-            </div>
+            <h3 class="history-title">Registro Consegne</h3>
+            <div id="submissions-list"></div>
         `;
 
         const listContainer = historyCol.querySelector('#submissions-list');
         submissions.forEach(sub => {
             const subCard = document.createElement('div');
             subCard.className = 'submission-card animate-in';
-            const isReviewed = sub.feedback && sub.feedback.length > 0;
-            const studentName = sub.profiles?.name || "Luci"; // "Luci" better than "L" if null
+            const isReviewed = sub.status === 'reviewed' || (sub.feedback && sub.feedback.length > 0);
+            const isPending = sub.status === 'pending';
+            const studentName = sub.profiles?.name || "Luci";
 
-            subCard.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 3.5rem;">
-                    <div style="display: flex; gap: 1.8rem; align-items: center;">
-                        <div style="width: 55px; height: 55px; border-radius: 12px; background: var(--color-crema-oscuro); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-terracota);">${studentName.charAt(0)}</div>
-                        <div>
-                            <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink);">${studentName}</div>
-                            <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 850; margin-top: 0.3rem;">Entregado el: ${new Date(sub.created_at).toLocaleString('it-IT')}</div>
+            if (isPending) {
+                subCard.style.opacity = '0.6';
+                subCard.style.border = '2px dashed rgba(0,0,0,0.05)';
+                subCard.style.background = 'rgba(0,0,0,0.01)';
+                subCard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 1.8rem; align-items: center;">
+                            <div style="width: 55px; height: 55px; border-radius: 12px; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: #92400e;">${studentName.charAt(0)}</div>
+                            <div>
+                                <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink);">${studentName}</div>
+                                <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 850; margin-top: 0.3rem;">Status: Pendente 🪶</div>
+                            </div>
+                        </div>
+                        <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 900; color: #92400e; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.1em;">In attesa di Luci</div>
+                    </div>
+                `;
+            } else {
+                subCard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 3.5rem;">
+                        <div style="display: flex; gap: 1.8rem; align-items: center;">
+                            <div style="width: 55px; height: 55px; border-radius: 12px; background: var(--color-crema-oscuro); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-terracota);">${studentName.charAt(0)}</div>
+                            <div>
+                                <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink);">${studentName}</div>
+                                <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 850; margin-top: 0.3rem;">Consegnato il: ${new Date(sub.created_at).toLocaleString('it-IT')}</div>
+                            </div>
+                        </div>
+                        <div class="status-badge ${isReviewed ? 'status-reviewed' : 'status-submitted'}">
+                            ${isReviewed ? 'Sigillato ✒️' : 'Da Correggere ✒️'}
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-bordo); opacity: 0.6;">RISPOSTA DELLO STUDENTE ✨</span>
-                    <div class="response-box">
-                        ${renderSubmissionContent(sub)}
+                    <div>
+                        <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-bordo); opacity: 0.6;">RISPOSTA DELLO STUDENTE ✨</span>
+                        <div class="response-box">
+                            ${renderSubmissionContent(sub)}
+                        </div>
                     </div>
-                </div>
 
-                <div id="feedback-display-${sub.id}" style="margin-top: 3.5rem;">
-                    ${isReviewed ? `
-                        <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">IL MIO SIGILLO ✒️</span>
+                    <div id="feedback-display-${sub.id}" style="margin-top: 3.5rem;">
+                        ${isReviewed ? `
+                            <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">IL MIO SIGILLO ✒️</span>
+                        ` : ''}
+                        ${sub.feedback ? sub.feedback.map(f => `
+                            <div class="feedback-note">
+                                <div class="feedback-comment">"${f.comment}"</div>
+                            </div>
+                        `).join('') : ''}
+                    </div>
+
+                    ${!isReviewed ? `
+                        <div style="margin-top: 4rem; padding-top: 3.5rem; border-top: 1.5px solid rgba(0,0,0,0.03);">
+                            <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">DEVOLUZIONE DEL MAESTRO</span>
+                            <textarea id="feedback-input-${sub.id}" style="width: 100%; border: none; background: #fffdfa; font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-ink); outline: none; min-height: 12rem; resize: none; border-bottom: 1.5px solid rgba(0,0,0,0.04); margin-bottom: 3rem; padding: 1.5rem;" placeholder="Escribe tu corrección aquí..."></textarea>
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="btn-feedback" id="btn-save-feedback-${sub.id}">Firma Giancarlo ✒️</button>
+                            </div>
+                        </div>
                     ` : ''}
-                    ${sub.feedback ? sub.feedback.map(f => `
-                        <div class="feedback-note">
-                            <div class="feedback-comment">"${f.comment}"</div>
-                        </div>
-                    `).join('') : ''}
-                </div>
-
-                ${!isReviewed ? `
-                    <div style="margin-top: 4rem; padding-top: 3.5rem; border-top: 1.5px solid rgba(0,0,0,0.03);">
-                        <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">DEVOLUZIONE DEL MAESTRO</span>
-                        <textarea id="feedback-input-${sub.id}" style="width: 100%; border: none; background: #fffdfa; font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-ink); outline: none; min-height: 12rem; resize: none; border-bottom: 1.5px solid rgba(0,0,0,0.04); margin-bottom: 3rem; padding: 1.5rem;" placeholder="Escribe tu corrección aquí..."></textarea>
-                        <div style="display: flex; justify-content: flex-end;">
-                            <button class="btn-feedback" id="btn-save-feedback-${sub.id}">Firma Giancarlo ✒️</button>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-            const btnSave = subCard.querySelector(`#btn-save-feedback-${sub.id}`);
-            if (btnSave) btnSave.onclick = async () => await handleFeedbackSave(sub.id, subCard.querySelector(`#feedback-input-${sub.id}`).value);
+                `;
+                const btnSave = subCard.querySelector(`#btn-save-feedback-${sub.id}`);
+                if (btnSave) btnSave.onclick = async () => await handleFeedbackSave(sub.id, subCard.querySelector(`#feedback-input-${sub.id}`).value);
+            }
             listContainer.appendChild(subCard);
         });
+
+        const getStatusBadge = () => {
+            if (submissions.length === 0) return `<div class="status-badge status-pending">🪶 Pendente (Assente)</div>`;
+            const hasReviewed = submissions.some(s => s.feedback && s.feedback.length > 0);
+            if (hasReviewed) return `<div class="status-badge status-reviewed">🏛️ Recensito (Sigillato)</div>`;
+            return `<div class="status-badge status-submitted">📮 Consegnato (Attesa)</div>`;
+        };
+
+        const renderTaskItems = () => {
+            const c = task.content || {};
+            // Gather items from different possible property names
+            const items = c.items || c.pairs || c.words || c.data || [];
+            
+            if (!items.length && !c.text) {
+                return `<p style="font-family: var(--font-body); font-size: 1.3rem; line-height: 1.6; color: var(--color-ink); font-style: italic; opacity: 0.6;">
+                    "${c.description || 'Nessun dettaglio aggiuntivo.'}"
+                </p>`;
+            }
+
+            if (task.type === 'order_sentence' || (Array.isArray(c.words) && !c.words[0]?.it)) {
+                const words = c.words || [];
+                return `<div class="content-preview" style="display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                    ${words.map(w => `<span style="padding: 0.6rem 1.2rem; background: rgba(0,0,0,0.03); border-radius: 8px; font-family: var(--font-body);">${w}</span>`).join('')}
+                </div>`;
+            }
+
+            if (c.text) {
+                return `<div class="content-preview">
+                    <p style="font-family: var(--font-body); font-size: 1.2rem; line-height: 1.6; color: var(--color-ink);">${c.text}</p>
+                </div>`;
+            }
+
+            return `
+                <div class="content-preview">
+                    ${items.map(it => `
+                        <div class="content-item">
+                            <div class="content-it">${it.italiano || it.it || it.word || it.phrase || '...'}</div>
+                            <div class="content-arrow">→</div>
+                            <div class="content-es">${it.español || it.es || it.translation || '...'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        };
 
         const infoCol = document.createElement('div');
         infoCol.innerHTML = `
             <div class="task-info-hero">
+                ${getStatusBadge()}
                 <span class="ui-label">ATTO DIDATTICO</span>
-                <h1 style="font-family: var(--font-titles); font-size: 2.8rem; margin-bottom: 3rem; color: var(--color-ink); border-bottom: 1.5px solid rgba(0,0,0,0.04); padding-bottom: 1.5rem;">${task.title}</h1>
-                <div style="padding: 2.5rem; background: #fffcf8; border-radius: 20px; border: 1px solid rgba(0,0,0,0.02); margin-bottom: 3rem;">
-                    <span class="ui-label" style="font-size: 0.7rem; opacity: 0.3;">CONTESTO</span>
-                    <p style="font-family: var(--font-body); font-size: 1.4rem; line-height: 1.6; color: var(--color-ink); font-style: italic; opacity: 0.8;">
-                        "${task.type === 'translation_choice' ? task.content?.question : (task.type === 'error_correction' ? task.content?.incorrect : (task.content?.description || "Lezione registrata."))}"
-                    </p>
+                <h1 style="font-family: var(--font-heading); font-size: 3.5rem; font-weight: 700; line-height: 1; margin-bottom: 3rem; color: var(--color-ink); border-bottom: 1.5px solid rgba(0,0,0,0.04); padding-bottom: 1.5rem;">${task.title}</h1>
+                
+                <div style="margin-bottom: 3rem;">
+                    <span class="ui-label" style="font-size: 0.7rem; opacity: 0.3;">CONTENUTO DELL'ATTO</span>
+                    ${renderTaskItems()}
+                </div>
+
+                <div style="padding: 2rem; background: #fffcf8; border-radius: 15px; border: 1px solid rgba(166, 77, 50, 0.05);">
+                    <span class="ui-label" style="font-size: 0.7rem; opacity: 0.3; margin-bottom: 0.5rem;">TIPO ATTO</span>
+                    <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 850; color: var(--color-terracota); letter-spacing: 0.1em;">
+                        ${TYPE_TRANSLATIONS[task.type] || task.type.toUpperCase()}
+                    </div>
                 </div>
             </div>
+
             <div style="background: #43191a; color: white; border-radius: 30px; padding: 4.5rem; box-shadow: 0 15px 50px rgba(67, 25, 26, 0.3);">
                 <h4 style="font-family: var(--font-titles); font-size: 2.2rem; margin-bottom: 1.5rem;">Libro del Maestro</h4>
                 <p style="font-family: var(--font-body); font-size: 1.25rem; opacity: 0.75; line-height: 1.6;">

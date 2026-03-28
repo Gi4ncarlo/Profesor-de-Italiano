@@ -113,11 +113,10 @@ export const createNotification = async ({ recipientId, type, taskId }) => {
                 type,
                 task_id: taskId,
                 read: false
-            })
-            .select().single();
+            });
 
         if (error) throw error;
-        return { data, error: null };
+        return { data: true, error: null };
     } catch (err) {
         // We log it but usually don't want to block the main action if notification fails
         console.error("[Silent Notification Error]:", err);
@@ -155,10 +154,12 @@ export const getNotificationContent = (notif) => {
     const taskTitle = notif.task?.title || 'una tarea';
     switch (notif.type) {
         case 'new_submission':
-            return `Luciana ha entregado: "${taskTitle}"`;
+            return `Luciana ha consegnato: "${taskTitle}"`;
         case 'new_feedback':
-            return `Giancarlo ha corregido: "${taskTitle}"`;
+            return `Giancarlo ha sigillato: "${taskTitle}" ✨`;
+        case 'new_assignment':
+            return `Nuovo atto per te: "${taskTitle}" 📓`;
         default:
-            return `Nueva actualización en "${taskTitle}"`;
+            return `Aggiornamento in: "${taskTitle}"`;
     }
 };

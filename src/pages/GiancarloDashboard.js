@@ -7,15 +7,19 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingSkeleton } from '../components/Loading';
 import { toast } from '../components/Toast';
 import { supabase } from '../services/supabaseClient';
+import { searchTatoeba } from '../services/tatoebaService';
+import { getNotifications, markAsRead, subscribeToNotifications, getNotificationContent, clearAllNotifications, cleanupOldNotifications } from '../services/notifications';
 
 const TYPE_TRANSLATIONS = {
     'roleplay': 'Conversazione', 'conversazione': 'Conversazione',
     'flashcard': 'Lessico', 'flashcards': 'Lessico', 'lessico': 'Lessico',
-    'fill': 'Completare', 'completare': 'Completare',
-    'fill_choice': 'Scelta Multipla',
-    'order_sentence': 'Ordina Frase',
-    'translation_choice': 'Traduzione',
-    'error_correction': 'Correzione'
+    'fill': '🖋️ Completare', 'completare': '🖋️ Completare',
+    'fill_choice': '📝 Scelta Multipla',
+    'order_sentence': '🧩 Ordina Frase',
+    'translation': '🌍 Traduzione',
+    'translation_choice': 'Traduzione', /* Legacy */
+    'error_correction': '✏️ Correzione',
+    'speed': '⚡ Velocità'
 };
 
 export const GiancarloDashboard = (navigate, user) => {
@@ -34,8 +38,81 @@ export const GiancarloDashboard = (navigate, user) => {
     let flashcards = [{ word: '', translation: '', example: '' }];
     let fillChoices = [];
     let fcText = '';
-    let tcOptions = [{ text: '' }, { text: '' }, { text: '' }]; // translation_choice options
-    let tcCorrect = '';   // translation_choice correct option
+    let tcOptions = [{ text: '' }, { text: '' }, { text: '' }];
+    let tcCorrect = '';
+
+    // Tatoeba & New Types State
+    let tatoebaQuery = '';
+    let tatoebaResults = [];
+    let tatoebaLoading = false;
+    let tatoebaSearched = false;
+    let tatoebaError = '';
+    
+    let fillSentences = [];
+    let transPairs = [];
+    let transDir = 'it-es';
+    let speedPairs = [];
+    let speedDir = 'it-es';
+    let notifications = [];
+
+    const timeAgo = (date) => {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        if (seconds < 60) return "adesso";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} min`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} h`;
+        const days = Math.floor(hours / 24);
+        return `${days} d`;
+    };
+
+    const renderNotifications = () => {
+        const list = container.querySelector('#notifications-list');
+        const badge = container.querySelector('#notif-count');
+        const unread = notifications.filter(n => !n.read);
+        
+        if (badge) {
+            badge.innerText = unread.length;
+            badge.style.display = unread.length > 0 ? 'flex' : 'none';
+        }
+
+        if (list) {
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="notification-empty">Tutto tranquillo ✨</div>';
+            } else {
+                list.innerHTML = notifications.map(n => `
+                    <div class="notification-item ${n.read ? '' : 'unread'}" data-id="${n.id}" data-task="${n.task_id}">
+                        <div class="notification-icon">${n.type === 'new_submission' ? '🎭' : '✒️'}</div>
+                        <div class="notification-info">
+                            <div class="notification-text">${getNotificationContent(n)}</div>
+                            <div class="notification-time">${timeAgo(n.created_at)}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                list.querySelectorAll('.notification-item').forEach(item => {
+                    item.onclick = async (e) => {
+                        e.stopPropagation();
+                        const id = item.dataset.id;
+                        const taskId = item.dataset.task;
+                        await markAsRead(id);
+                        // Teachers go to correct review page
+                        navigate(`/task/${taskId}`);
+                    };
+                });
+            }
+        }
+    };
+
+    const loadNotifications = async () => {
+        try {
+            const { data } = await getNotifications(user.id);
+            notifications = data;
+            renderNotifications();
+        } catch (e) {
+            console.error("Error loading notifications:", e);
+        }
+    };
 
     const modal = ReviewModal(async (submissionId, comment) => {
         try {
@@ -76,7 +153,6 @@ export const GiancarloDashboard = (navigate, user) => {
         isLoading = true;
         render();
         try {
-            // Load students and tasks in parallel
             const [studentsRes, tasksRes] = await Promise.all([
                 supabase.from('profiles').select('id, name, avatar_url').eq('role', 'student'),
                 getTeacherTasks()
@@ -84,7 +160,6 @@ export const GiancarloDashboard = (navigate, user) => {
 
             if (studentsRes.data && studentsRes.data.length > 0) {
                 students = studentsRes.data;
-                // Auto-select if only one, keep selection if already set
                 if (!selectedStudentId || !students.find(s => s.id === selectedStudentId)) {
                     selectedStudentId = students[0].id;
                 }
@@ -107,11 +182,13 @@ export const GiancarloDashboard = (navigate, user) => {
     };
 
     const handleCreateTask = async () => {
-        const title = container.querySelector('#task-title').value.trim();
+        const titleInput = container.querySelector('#task-title');
+        const title = titleInput ? titleInput.value.trim() : '';
         if (!title) return toast.show("Manca il titolo.", "error");
+        
         let content = {};
         if (cType === 'roleplay') {
-            const dialogue = container.querySelector('#rp-desc').value.trim();
+            const dialogue = container.querySelector('#rp-desc')?.value.trim();
             if (!dialogue) return toast.show("Manca lo scenario.", "error");
             content = { type: 'roleplay', description: dialogue };
         } else if (cType === 'flashcard') {
@@ -119,27 +196,32 @@ export const GiancarloDashboard = (navigate, user) => {
             if (validCards.length === 0) return toast.show("Crea almeno una carta.", "error");
             content = { type: 'flashcards', items: validCards };
         } else if (cType === 'fill') {
-            const text = container.querySelector('#fill-text').value.trim();
-            if (!text) return toast.show("Inserisci il testo.", "error");
-            content = { type: 'fill', text: text };
+            if (fillSentences.length === 0) return toast.show("Aggiungi almeno una frase.", "error");
+            const text = fillSentences.map(s => {
+                if(!s.blank) return s.text;
+                const reg = new RegExp(`\\\\b${s.blank}\\\\b`, 'i');
+                return s.text.replace(reg, '___');
+            }).join('\n');
+            const sources = fillSentences.map(s => ({ id: s.tatoebaId, origin: s.source }));
+            content = { type: 'fill', text: text, sources, sentences: fillSentences };
+        } else if (cType === 'translation') {
+            const valid = transPairs.filter(p => p.it && p.es);
+            if (valid.length === 0) return toast.show("Aggiungi almeno un elemento.", "error");
+            const sources = valid.map(s => ({ id: s.tatoebaId, origin: s.source }));
+            const dir = container.querySelector('#trans-dir')?.value || 'it-es';
+            content = { type: 'translation', pairs: valid, direction: dir, sources };
         } else if (cType === 'fill_choice') {
-            const text = container.querySelector('#fc-text').value.trim();
+            const text = container.querySelector('#fc-text')?.value.trim();
             if (!text) return toast.show("Inserisci il testo.", "error");
             if (fillChoices.length === 0) return toast.show("Inserisci almeno uno spazio (___).", "error");
-            
-            // Check all choices have a correct answer
             const incomplete = fillChoices.some(fc => !fc.correct || fc.options.length < 2);
             if (incomplete) return toast.show("Completa tutte le opzioni per ogni spazio.", "error");
-            
             content = { type: 'fill_choice', text: text, gaps: fillChoices };
         } else if (cType === 'order_sentence') {
-            const text = container.querySelector('#os-text').value.trim();
+            const text = container.querySelector('#os-text')?.value.trim();
             if (!text) return toast.show("Inserisci la frase.", "error");
-            
-            // Clean logic dividing it into words keeping simple punctuation
             const words = text.split(/\s+/).filter(w => w.length > 0);
             if (words.length < 2) return toast.show("La frase deve avere almeno due parole.", "error");
-            
             let shuffled = [...words];
             do {
                 for (let i = shuffled.length - 1; i > 0; i--) {
@@ -147,7 +229,6 @@ export const GiancarloDashboard = (navigate, user) => {
                     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
                 }
             } while (words.length > 2 && shuffled.join('') === words.join(''));
-            
             content = { type: 'order_sentence', original: text, words: shuffled, correctOrder: words };
         } else if (cType === 'translation_choice') {
             const question = container.querySelector('#tc-question')?.value.trim();
@@ -164,34 +245,105 @@ export const GiancarloDashboard = (navigate, user) => {
             if (!incorrect) return toast.show("Inserisci la frase scorretta.", "error");
             if (!correct) return toast.show("Inserisci la frase corretta.", "error");
             content = { type: 'error_correction', incorrect, correct };
+        } else if (cType === 'speed') {
+            const validWords = speedPairs.filter(w => w.it.trim() && w.es.trim());
+            if (validWords.length < 8) return toast.show("Minimo 8 parole.", "error");
+            if (validWords.length > 15) return toast.show("Massimo 15 parole.", "error");
+            const sources = validWords.map(s => ({ id: s.tatoebaId, origin: s.source || 'manual' }));
+            const direction = container.querySelector('#speed-dir')?.value || 'it-es';
+            content = { type: 'speed', words: validWords, direction, sources };
         }
-        // Use the pre-loaded selectedStudentId
-        if (!selectedStudentId) {
-            return toast.show("Seleziona un allievo prima di assegnare.", "error");
-        }
+        
+        if (!selectedStudentId) return toast.show("Seleziona un allievo.", "error");
+        
         try {
             isSubmitting = true; render();
+            const taskType = cType === 'flashcard' ? 'flashcards' : cType;
             if (editTaskId) {
-                const { error } = await supabase.from('tasks').update({
-                    title, type: cType === 'flashcard' ? 'flashcards' : cType, content
-                }).eq('id', editTaskId);
+                const { error } = await supabase.from('tasks').update({ title, type: taskType, content }).eq('id', editTaskId);
                 if (error) throw error;
                 toast.show("Atto modificato. ✓");
                 editTaskId = null;
             } else {
-                const { error } = await createTaskWithAssignment({
-                    title, type: cType === 'flashcard' ? 'flashcards' : cType,
-                    content, studentId: selectedStudentId
-                });
+                const { error } = await createTaskWithAssignment({ title, type: taskType, content, studentId: selectedStudentId });
                 if (error) throw error;
                 toast.show("Atto assegnato. ✓");
             }
+            // Clear creation state
             flashcards = [{ word: '', translation: '', example: '' }];
-            fcText = ""; fillChoices = [];
+            fcText = ""; fillChoices = []; fillSentences = []; transPairs = []; speedPairs = [];
             tcOptions = [{ text: '' }, { text: '' }, { text: '' }]; tcCorrect = '';
             refresh();
         } catch (err) { console.error(err); toast.show("Errore.", "error"); }
         finally { isSubmitting = false; render(); }
+    };
+
+    const getLongestWord = (sentence) => {
+        const stops = ['il', 'la', 'lo', 'le', 'gli', 'un', 'una', 'di', 'da', 'in', 'con', 'su', 'per', 'tra', 'fra', 'a', 'e', 'o', 'non', 'che', 'se', 'ma', 'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'del', 'dello', 'della', 'dei', 'degli', 'delle', 'nel', 'nello', 'nella', 'nei', 'negli', 'nelle', 'mi', 'ti', 'ci', 'vi', 'si', 'ho', 'hai', 'ha', 'abbiamo', 'avete', 'hanno', 'sono', 'sei', 'è', 'siamo', 'siete', 'era', 'ero', 'erano', 'sarà', 'saremo', 'siete', 'hanno', 'più', 'mio', 'tuo', 'suo', 'nostro', 'vostro', 'loro', 'questo', 'questa', 'quello', 'quella'];
+        const words = sentence.replace(/[^\w\sàèéìòùáéíóúñ]/ig, '').split(/\s+/).filter(w => w.trim());
+        let fw = '';
+        for (const w of words) {
+            if (!stops.includes(w.toLowerCase()) && w.length > fw.length) fw = w;
+        }
+        return fw || words[0] || '';
+    };
+
+    const handleTatoebaSearch = async () => {
+        const input = container.querySelector('#tatoeba-input');
+        if (!input) return;
+        const query = input.value.trim();
+        if (!query) return;
+        tatoebaQuery = query;
+        tatoebaLoading = true; tatoebaSearched = true; tatoebaError = '';
+        render();
+        try {
+            const results = await searchTatoeba(query);
+            tatoebaResults = results.map(r => ({ ...r, added: false }));
+        } catch (err) {
+            tatoebaError = err.message || "Errore Tatoeba";
+            tatoebaResults = [];
+        } finally {
+            tatoebaLoading = false;
+            render();
+            // Restore focus safely
+            const rInput = container.querySelector('#tatoeba-input');
+            if(rInput) { 
+                rInput.focus(); 
+                rInput.setSelectionRange(tatoebaQuery.length, tatoebaQuery.length); 
+            }
+        }
+    };
+
+    const renderTatoebaPanel = () => {
+        if (!['fill', 'translation', 'speed'].includes(cType)) return '';
+        return `
+            <div style="margin-bottom: 3.5rem; border: 1px solid rgba(166, 77, 50, 0.2); border-radius: 2rem; padding: 2.5rem; background: var(--glass); display: flex; flex-direction: column; gap: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-size: 1.8rem;">🔍</span>
+                    <span style="font-family: var(--font-body); font-weight: 700; font-size: 1.2rem; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.1em;">Buscar frases reales en Tatoeba</span>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="text" id="tatoeba-input" class="teacher-input" placeholder="Ej: caffè, famiglia, lavoro..." value="${tatoebaQuery}" style="flex: 1; font-size: 1.4rem; padding: 1.2rem; border-radius: 1rem;" onkeydown="if(event.key==='Enter') document.getElementById('tatoeba-search-btn').click();">
+                    <button id="tatoeba-search-btn" style="background: var(--color-terracota); color: white; border: none; padding: 0 2.5rem; border-radius: 1rem; font-family: var(--font-ui); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;">Buscar</button>
+                </div>
+                <div id="tatoeba-results-container" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    ${tatoebaLoading ? '<div style="font-family: var(--font-ui); font-style: italic; opacity: 0.5; font-size: 1.2rem; margin-top: 1rem; text-align: center;">Cercando su Tatoeba...</div>' : ''}
+                    ${tatoebaError ? `<div style="font-family: var(--font-ui); color: #dc2626; font-size: 1.2rem; margin-top: 1rem; text-align: center;">${tatoebaError}</div>` : ''}
+                    ${tatoebaSearched && !tatoebaLoading && tatoebaResults.length === 0 && !tatoebaError ? '<div style="font-family: var(--font-ui); font-style: italic; color: #a67d32; font-size: 1.2rem; margin-top: 1rem; text-align: center;">Nessun risultato. Prova con un\'altra parola.</div>' : ''}
+                    ${tatoebaResults.map((r, idx) => `
+                        <div class="tatoeba-card" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--color-crema); border: 1px solid #d4c8b8; border-radius: 1.5rem; ${r.added ? 'opacity: 0.5;' : ''}">
+                            <div style="flex: 1; padding-right: 2rem;">
+                                <div style="font-family: var(--font-body); font-size: 1.5rem; color: var(--color-ink); margin-bottom: 0.4rem; font-weight: 500;">🇮🇹 ${r.italiano}</div>
+                                <div style="font-family: var(--font-body); font-size: 1.35rem; color: rgba(0,0,0,0.6);">🇦🇷 ${r.español}</div>
+                            </div>
+                            ${r.added ? 
+                                `<div style="font-family: var(--font-ui); color: #657e62; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; font-size: 1rem; padding: 0 1rem;">✓ Agregada</div>` : 
+                                `<button class="tatoeba-add-btn" data-idx="${idx}" style="background: white; border: 1.5px solid var(--color-terracota); color: var(--color-terracota); padding: 0.8rem 1.6rem; border-radius: 0.8rem; font-family: var(--font-ui); font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 1rem; white-space: nowrap;">+ Agregar</button>`
+                            }
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
     };
 
     const render = () => {
@@ -200,6 +352,8 @@ export const GiancarloDashboard = (navigate, user) => {
         // SIDEBAR
         const sidebar = document.createElement('aside');
         sidebar.className = 'atelier-sidebar';
+        sidebar.style.setProperty('--profile-accent', 'var(--color-terracota)');
+
         sidebar.innerHTML = `
             <div>
                 <div class="atelier-sidebar__brand">Atelier di <em>Lingue</em></div>
@@ -233,24 +387,45 @@ export const GiancarloDashboard = (navigate, user) => {
         main.innerHTML = `
             <div class="teacher-grid">
                 <div>
-                    <header class="teacher-header">
-                        <h1>Bentornato, Maestro Giancarlo.</h1>
-                        <p>LA TUA BOTTEGA DIDATTICA DI OGGI</p>
+                    <header class="teacher-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4rem;">
+                        <div>
+                            <h1>Bentornato, Maestro Giancarlo.</h1>
+                            <p>LA TUA BOTTEGA DIDATTICA DI OGGI</p>
+                        </div>
+
+                        <div style="position: relative; margin-top: 0.5rem;">
+                            <div class="notification-bell-container" id="notif-bell" style="background: white; border-radius: 50%; width: 4.2rem; height: 4.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer;">
+                                <svg style="width: 2rem; height: 2rem; fill: var(--color-ink); opacity: 0.7;" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                                <div class="notification-badge" id="notif-count" style="display:none; position: absolute; top: -0.2rem; right: -0.2rem; background: var(--color-terracota); color: white; min-width: 1.8rem; height: 1.8rem; padding: 0 0.5rem; border-radius: 50%; font-size: 0.75rem; align-items: center; justify-content: center; border: 2px solid white; font-weight: 900;">0</div>
+                            </div>
+                            
+                            <div class="notification-dropdown" id="notif-dropdown" style="top: 120%; right: 0;">
+                                <div class="notification-header">
+                                    <span>Notifiche</span>
+                                    <span id="clear-all" style="cursor:pointer; text-decoration: underline; font-size: 0.7rem; opacity: 0.6;">Svuota tutto</span>
+                                </div>
+                                <div class="notification-list" id="notifications-list"></div>
+                            </div>
+                        </div>
                     </header>
                     <nav class="teacher-chips">
                         <div class="teacher-chip ${cType === 'roleplay' ? 'active' : ''}" data-type="roleplay">📍 Conversazione</div>
                         <div class="teacher-chip ${cType === 'flashcard' ? 'active' : ''}" data-type="flashcard">🎴 Lessico</div>
                         <div class="teacher-chip ${cType === 'fill' ? 'active' : ''}" data-type="fill">🖋️ Completare</div>
+                        <div class="teacher-chip ${cType === 'translation' ? 'active' : ''}" data-type="translation">🌍 Traduzione</div>
                         <div class="teacher-chip ${cType === 'fill_choice' ? 'active' : ''}" data-type="fill_choice">📝 Scelta Multipla</div>
                         <div class="teacher-chip ${cType === 'order_sentence' ? 'active' : ''}" data-type="order_sentence">🧩 Ordina Frase</div>
-                        <div class="teacher-chip ${cType === 'translation_choice' ? 'active' : ''}" data-type="translation_choice">🌍 Traduzione</div>
                         <div class="teacher-chip ${cType === 'error_correction' ? 'active' : ''}" data-type="error_correction">✏️ Correzione</div>
+                        <div class="teacher-chip ${cType === 'speed' ? 'active' : ''}" data-type="speed">⚡ Velocità</div>
                     </nav>
                     <div class="teacher-form">
                         <div style="margin-bottom: 3rem;">
                             <label class="teacher-label">Titolo della Lezione</label>
                             <input type="text" id="task-title" class="teacher-input" placeholder="Esempio: Una serata a Roma...">
                         </div>
+                        
+                        ${renderTatoebaPanel()}
+
                         <div id="dynamic-content"></div>
 
                         ${students.length > 1 ? `
@@ -278,20 +453,7 @@ export const GiancarloDashboard = (navigate, user) => {
             </div>
         `;
 
-        // Dynamic content
         const dContent = main.querySelector('#dynamic-content');
-
-        // Wire student selector if present
-        const studentSelect = main.querySelector('#student-select');
-        if (studentSelect) {
-            studentSelect.onchange = (e) => {
-                selectedStudentId = e.target.value;
-                studentName = students.find(s => s.id === selectedStudentId)?.name || studentName;
-                // Update the "Cammino di" header live
-                const header = main.querySelector('.teacher-tasks-header');
-                if (header) header.textContent = `Cammino di ${studentName}`;
-            };
-        }
 
         if (cType === 'roleplay') {
             dContent.innerHTML = '<label class="teacher-label">Scenario del Dialogo</label><textarea id="rp-desc" class="teacher-textarea" placeholder="Crea la scena..."></textarea>';
@@ -305,8 +467,7 @@ export const GiancarloDashboard = (navigate, user) => {
             `;
             const fList = dContent.querySelector('#flashcards-list');
             flashcards.forEach((card, idx) => {
-                const row = document.createElement('div');
-                row.className = 'teacher-card-row';
+                const row = document.createElement('div');   row.className = 'teacher-card-row';
                 row.innerHTML = `
                     <input type="text" class="teacher-input" placeholder="Parola" value="${card.word}" data-idx="${idx}" data-field="word" style="font-size: 1.4rem;">
                     <input type="text" class="teacher-input" placeholder="Traduzione" value="${card.translation}" data-idx="${idx}" data-field="translation" style="font-size: 1.4rem;">
@@ -319,12 +480,75 @@ export const GiancarloDashboard = (navigate, user) => {
             fList.querySelectorAll('[data-remove]').forEach(b => b.onclick = (e) => { flashcards.splice(e.target.dataset.remove, 1); render(); });
             dContent.querySelector('#add-card').onclick = () => { flashcards.push({ word: '', translation: '', example: '' }); render(); };
         } else if (cType === 'fill') {
-            dContent.innerHTML = '<label class="teacher-label">Testo con Spazi (usa ___ )</label><textarea id="fill-text" class="teacher-textarea" placeholder="Io ___ (andare) al mercato."></textarea>';
+            dContent.innerHTML = `
+                <div style="margin-bottom: 2rem;">
+                    <label class="teacher-label">Frasi da Completare</label>
+                    <div id="fill-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                    <button id="add-manual-fill" style="margin-top: 1.5rem; background: none; border: 2px dashed rgba(0,0,0,0.1); width: 100%; padding: 1.5rem; border-radius: 1.5rem; color: rgba(0,0,0,0.4); font-family: var(--font-ui); text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; cursor: pointer;">+ Aggiungi frase manuale</button>
+                </div>`;
+            const fList = dContent.querySelector('#fill-list');
+            const renderFills = () => {
+                fList.innerHTML = fillSentences.length === 0 ? '<div style="opacity: 0.3; font-style: italic; font-size: 1.3rem;">Nessuna frase. Cerca su Tatoeba o aggiungi manualmente.</div>' : '';
+                fillSentences.forEach((s, idx) => {
+                    const row = document.createElement('div'); row.className = 'teacher-card-row'; row.style.background = 'white'; row.style.gridTemplateColumns = '1fr auto';
+                    if (s.editMode) {
+                        const words = s.text.split(/(\s+)/);
+                        const clickableText = words.map(w => {
+                            if (!w.trim() || /^[^\wàèéìòùáéíóúñ]+$/i.test(w)) return w;
+                            return `<span class="word-token" style="cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 0.5rem; background: rgba(0,0,0,0.03); margin: 0 0.2rem; transition: background 0.2s;">${w}</span>`;
+                        }).join('');
+                        row.innerHTML = `<div><div style="font-family: var(--font-body); font-size: 1.2rem; opacity: 0.5; margin-bottom: 0.5rem;">Clicca su una parola per nasconderla:</div><div style="font-size: 1.8rem; line-height: 1.6;">${clickableText}</div></div><button class="btn-remove" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; opacity: 0.25; align-self: flex-start;" data-remove="${idx}">✕</button>`;
+                        row.querySelectorAll('.word-token').forEach(span => {
+                            span.onclick = () => { fillSentences[idx].blank = span.textContent.trim().replace(/[^\w\sàèéìòùáéíóúñ]/ig, ''); fillSentences[idx].editMode = false; renderFills(); };
+                            span.onmouseover = () => span.style.background = 'rgba(166, 77, 50, 0.1)'; span.onmouseout = () => span.style.background = 'rgba(0,0,0,0.03)';
+                        });
+                    } else {
+                        const reg = s.blank ? new RegExp(`\\b${s.blank}\\b`, 'i') : null;
+                        let highlighted = (reg && s.text.match(reg)) ? s.text.replace(reg, `<span style="color: var(--color-terracota); font-weight: bold; border-bottom: 2px solid var(--color-terracota); padding-bottom: 2px; cursor: pointer;" class="blank-word" data-idx="${idx}">${s.blank} ✏️</span>`) : s.text + ` <span class="blank-word" data-idx="${idx}" style="cursor:pointer; color: var(--color-terracota); font-weight: bold; font-size:1.2rem;">Scegli parola ✏️</span>`;
+                        row.innerHTML = `<div style="font-size: 1.6rem; font-family: var(--font-body);"><div style="margin-top: ${s.source==='manual'?'1rem':0};">${s.source === 'manual' ? `<input type="text" class="teacher-input manual-input" value="${s.text}" data-idx="${idx}" placeholder="Escribe tu frase aquí..." style="width: 100%; border-bottom: 1px dashed #ccc; font-size: 1.6rem; margin-bottom: 0.8rem; background: transparent; padding: 0.5rem 0;">` : ''}${highlighted}</div></div><button class="btn-remove" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; opacity: 0.25; align-self: flex-start;" data-remove="${idx}">✕</button>`;
+                        const manualInp = row.querySelector('.manual-input'); if (manualInp) manualInp.onchange = (e) => { fillSentences[idx].text = e.target.value; renderFills(); };
+                        const bw = row.querySelector('.blank-word'); if (bw) bw.onclick = () => { fillSentences[idx].editMode = true; renderFills(); };
+                    }
+                    fList.appendChild(row);
+                });
+                fList.querySelectorAll('.btn-remove').forEach(b => b.onclick = (e) => { fillSentences.splice(e.target.closest('[data-remove]').dataset.remove, 1); renderFills(); });
+            };
+            renderFills();
+            dContent.querySelector('#add-manual-fill').onclick = () => { fillSentences.push({ id: Date.now(), text: '', blank: '', source: 'manual', tatoebaId: null, editMode: false }); renderFills(); };
+        } else if (cType === 'translation') {
+            dContent.innerHTML = `<div style="margin-bottom: 2rem;">
+                    <label class="teacher-label">Direzione</label>
+                    <select id="trans-dir" class="teacher-input" style="font-size: 1.4rem; margin-bottom: 2rem;">
+                        <option value="it-es" ${transDir === 'it-es' ? 'selected' : ''}>🇮🇹 Italiano → 🇦🇷 Español</option>
+                        <option value="es-it" ${transDir === 'es-it' ? 'selected' : ''}>🇦🇷 Español → 🇮🇹 Italiano</option>
+                    </select>
+                    <label class="teacher-label">Traduzioni</label>
+                    <div id="trans-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                    <button id="add-manual-trans" style="margin-top: 1.5rem; background: none; border: 2px dashed rgba(0,0,0,0.1); width: 100%; padding: 1.5rem; border-radius: 1.5rem; color: rgba(0,0,0,0.4); font-family: var(--font-ui); text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; cursor: pointer;">+ Agregar par manual</button>
+                </div>`;
+            const tList = dContent.querySelector('#trans-list');
+            const renderTransList = () => {
+                tList.innerHTML = transPairs.length === 0 ? '<div style="opacity: 0.3; font-style: italic; font-size: 1.3rem;">Ningún par. Cerca en Tatoeba o agregá manualmente.</div>' : '';
+                transPairs.forEach((pair, idx) => {
+                    const row = document.createElement('div'); row.className = 'teacher-card-row'; row.style.background = 'white'; row.style.gridTemplateColumns = '1fr auto';
+                    row.innerHTML = `<div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 1.5rem; font-family: var(--font-body);">
+                             <div style="display: flex; align-items: center; gap: 0.5rem;"><span>🇮🇹</span>
+                                ${pair.source === 'manual' ? `<input type="text" class="teacher-input" value="${pair.it}" data-idx="${idx}" data-field="it" placeholder="Italiano" style="flex:1; padding: 0.5rem; font-size:1.5rem; background:transparent;">` : `<span style="flex:1;">${pair.it}</span>`}</div>
+                             <div style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.6;"><span>🇦🇷</span>
+                                ${pair.source === 'manual' ? `<input type="text" class="teacher-input" value="${pair.es}" data-idx="${idx}" data-field="es" placeholder="Español" style="flex:1; padding: 0.5rem; font-size:1.4rem; background:transparent;">` : `<span style="flex:1;">${pair.es}</span>`}</div></div>
+                        <button class="btn-remove" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; opacity: 0.25; align-self: flex-start;" data-remove="${idx}">✕</button>`;
+                    tList.appendChild(row);
+                });
+                tList.querySelectorAll('.teacher-input').forEach(i => i.onchange = (e) => transPairs[e.target.dataset.idx][e.target.dataset.field] = e.target.value);
+                tList.querySelectorAll('.btn-remove').forEach(b => b.onclick = (e) => { transPairs.splice(e.target.closest('[data-remove]').dataset.remove, 1); renderTransList(); });
+            };
+            renderTransList();
+            dContent.querySelector('#add-manual-trans').onclick = () => { transPairs.push({ id: Date.now(), it: '', es: '', source: 'manual', tatoebaId: null }); renderTransList(); };
+            dContent.querySelector('#trans-dir').onchange = (e) => { transDir = e.target.value; };
         } else if (cType === 'fill_choice') {
             dContent.innerHTML = `
                 <label class="teacher-label">Testo con Opzioni (usa ___ )</label>
                 <textarea id="fc-text" class="teacher-textarea" placeholder="Oggi ___ (___) a Roma. Use ___ per ogni spazio.">${fcText}</textarea>
-                
                 <div id="fc-config-container" style="margin-top: 3rem;">
                     <div class="teacher-label" style="margin-bottom: 2rem;">Configurazione Opzioni</div>
                     <div id="fc-list" style="display: flex; flex-direction: column; gap: 2rem;"></div>
@@ -332,223 +556,127 @@ export const GiancarloDashboard = (navigate, user) => {
             `;
             const fcList = dContent.querySelector('#fc-list');
             const textarea = dContent.querySelector('#fc-text');
-
             const renderGapConfig = () => {
                 fcList.innerHTML = fillChoices.length === 0 ? '<div style="opacity: 0.3; font-style: italic;">Inserisci ___ nel testo per configurare le opzioni.</div>' : '';
                 fillChoices.forEach((fc, idx) => {
-                    const row = document.createElement('div');
-                    row.className = 'animate-in';
-                    row.style.background = 'white';
-                    row.style.padding = '2rem';
-                    row.style.borderRadius = '1.5rem';
-                    row.style.border = '1px solid rgba(0,0,0,0.03)';
-                    row.innerHTML = `
-                        <div style="font-family: var(--font-ui); font-size: 0.75rem; font-weight: 950; opacity: 0.4; margin-bottom: 1.5rem; text-transform: uppercase;">Spazio #${idx + 1}</div>
-                        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                            <input type="text" class="teacher-input" placeholder="Opzioni (separa con ,)" style="flex: 1; font-size: 1.3rem;" value="${fc.options.join(',')}">
-                            <select class="teacher-input" style="width: 25rem; font-size: 1.3rem;">
-                                <option value="">Scegli Corretta...</option>
-                                ${fc.options.map(opt => `<option value="${opt}" ${opt === fc.correct ? 'selected' : ''}>${opt}</option>`).join('')}
-                            </select>
-                        </div>
-                    `;
-                    
-                    const input = row.querySelector('input');
-                    const select = row.querySelector('select');
-                    
-                    input.onchange = (e) => {
-                        const opts = e.target.value.split(',').map(s => s.trim()).filter(s => s);
-                        fillChoices[idx].options = opts;
-                        const currentCorrect = fillChoices[idx].correct;
-                        select.innerHTML = '<option value="">Scegli Corretta...</option>' + 
-                            opts.map(opt => `<option value="${opt}" ${opt === currentCorrect ? 'selected' : ''}>${opt}</option>`).join('');
-                    };
-                    
-                    select.onchange = (e) => {
-                        fillChoices[idx].correct = e.target.value;
-                    };
-                    
+                    const row = document.createElement('div'); row.className = 'animate-in'; row.style.background = 'white'; row.style.padding = '2rem'; row.style.borderRadius = '1.5rem'; row.style.border = '1px solid rgba(0,0,0,0.03)';
+                    row.innerHTML = `<div style="font-family: var(--font-ui); font-size: 0.75rem; font-weight: 950; opacity: 0.4; margin-bottom: 1.5rem; text-transform: uppercase;">Spazio #${idx + 1}</div><div style="display: flex; gap: 1.5rem; flex-wrap: wrap;"><input type="text" class="teacher-input" placeholder="Opzioni (separa con ,)" style="flex: 1; font-size: 1.3rem;" value="${fc.options.join(',')}"><select class="teacher-input" style="width: 25rem; font-size: 1.3rem;"><option value="">Scegli Corretta...</option>${fc.options.map(opt => `<option value="${opt}" ${opt === fc.correct ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>`;
+                    const input = row.querySelector('input'); const select = row.querySelector('select');
+                    input.onchange = (e) => { const opts = e.target.value.split(',').map(s => s.trim()).filter(s => s); fillChoices[idx].options = opts; const curr = fillChoices[idx].correct; select.innerHTML = '<option value="">Scegli Corretta...</option>' + opts.map(opt => `<option value="${opt}" ${opt === curr ? 'selected' : ''}>${opt}</option>`).join(''); };
+                    select.onchange = (e) => { fillChoices[idx].correct = e.target.value; };
                     fcList.appendChild(row);
                 });
             };
-
             const syncGaps = () => {
                 const text = textarea.value;
                 const gapCount = (text.match(/___/g) || []).length;
-                if (fillChoices.length < gapCount) {
-                    for (let i = fillChoices.length; i < gapCount; i++) fillChoices.push({ options: [], correct: '' });
-                } else if (fillChoices.length > gapCount) {
-                    fillChoices = fillChoices.slice(0, gapCount);
-                }
+                if (fillChoices.length < gapCount) for (let i = fillChoices.length; i < gapCount; i++) fillChoices.push({ options: [], correct: '' });
+                else if (fillChoices.length > gapCount) fillChoices = fillChoices.slice(0, gapCount);
                 renderGapConfig();
             };
-
-            textarea.oninput = (e) => {
-                fcText = e.target.value;
-                syncGaps();
-            };
+            textarea.oninput = (e) => { fcText = e.target.value; syncGaps(); };
             syncGaps();
         } else if (cType === 'order_sentence') {
-            dContent.innerHTML = `
-                <label class="teacher-label">Frase Corretta</label>
-                <textarea id="os-text" class="teacher-textarea" placeholder="Inserisci la frase esatta (es. Io sono andato al mercato ieri.)"></textarea>
-                <div style="font-family: var(--font-body); font-size: 1.1rem; opacity: 0.5; margin-top: 1rem;">
-                    Il sistema dividerà e mescolerà le parole automaticamente. L'allievo dovrà ricomporla trascinando i blocchi.
-                </div>
-            `;
+            dContent.innerHTML = `<label class="teacher-label">Frase Corretta</label><textarea id="os-text" class="teacher-textarea" placeholder="Inserisci la frase esatta (es. Io sono andato al mercato ieri.)"></textarea><div style="font-family: var(--font-body); font-size: 1.1rem; opacity: 0.5; margin-top: 1rem;">Il sistema dividerà e mescolerà le parole automaticamente.</div>`;
         } else if (cType === 'translation_choice') {
-            dContent.innerHTML = `
-                <div style="margin-bottom: 2.5rem;">
-                    <label class="teacher-label">Frase da Tradurre (Spagnolo)</label>
-                    <textarea id="tc-question" class="teacher-textarea" style="min-height: 8rem;" placeholder="Es: Fui al mercado ayer">${tcOptions.question || ''}</textarea>
-                </div>
-                <label class="teacher-label">Opzioni di Risposta (Italiano)</label>
-                <div id="tc-options-list" style="display: flex; flex-direction: column; gap: 1.4rem; margin-bottom: 1.5rem;">
-                    ${tcOptions.map((opt, i) => `
-                        <div style="display: flex; gap: 1rem; align-items: center;">
-                            <input type="radio" name="tc-correct" id="tc-r-${i}" value="${i}" ${tcCorrect === String(i) ? 'checked' : ''} style="width: 1.8rem; height: 1.8rem; accent-color: var(--color-bordo); cursor: pointer; flex-shrink: 0;">
-                            <input type="text" class="teacher-input tc-opt-input" data-idx="${i}" placeholder="Opzione ${i+1}" value="${opt.text}" style="flex: 1; font-size: 1.4rem;">
-                            ${tcOptions.length > 2 ? `<button data-remove-tc="${i}" style="background:none; border:none; font-size:1.4rem; opacity:0.3; cursor:pointer;">✕</button>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                <button id="tc-add-opt" style="background: none; border: 2px dashed var(--color-terracota); color: var(--color-terracota); font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.1em; padding: 1rem 2rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6;">+ Aggiungi Opzione</button>
-                <div style="font-family: var(--font-body); font-size: 1.1rem; opacity: 0.5; margin-top: 1.5rem;">Seleziona il radio button accanto all'opzione corretta.</div>
-            `;
-
-            // Wire events
-            dContent.querySelectorAll('.tc-opt-input').forEach(inp => {
-                inp.oninput = (e) => { tcOptions[parseInt(e.target.dataset.idx)].text = e.target.value; };
-            });
-            dContent.querySelectorAll('[name="tc-correct"]').forEach(r => {
-                r.onchange = (e) => { tcCorrect = e.target.value; };
-            });
-            dContent.querySelectorAll('[data-remove-tc]').forEach(b => {
-                b.onclick = () => { tcOptions.splice(parseInt(b.dataset.removeTc), 1); if (parseInt(tcCorrect) >= tcOptions.length) tcCorrect = '0'; render(); };
-            });
+            dContent.innerHTML = `<div style="margin-bottom: 2.5rem;"><label class="teacher-label">Frase da Tradurre (Spagnolo)</label><textarea id="tc-question" class="teacher-textarea" style="min-height: 8rem;" placeholder="Es: Fui al mercado ayer"></textarea></div><label class="teacher-label">Opzioni di Risposta (Italiano)</label><div id="tc-options-list" style="display: flex; flex-direction: column; gap: 1.4rem; margin-bottom: 1.5rem;">${tcOptions.map((opt, i) => `<div style="display: flex; gap: 1rem; align-items: center;"><input type="radio" name="tc-correct" id="tc-r-${i}" value="${i}" ${tcCorrect === String(i) ? 'checked' : ''} style="width: 1.8rem; height: 1.8rem; accent-color: var(--color-bordo); flex-shrink: 0;"><input type="text" class="teacher-input tc-opt-input" data-idx="${i}" placeholder="Opzione ${i+1}" value="${opt.text}" style="flex: 1; font-size: 1.4rem;">${tcOptions.length > 2 ? `<button data-remove-tc="${i}" style="background:none; border:none; font-size:1.4rem; opacity:0.3; cursor:pointer;">✕</button>` : ''}</div>`).join('')}</div><button id="tc-add-opt" style="background: none; border: 2px dashed var(--color-terracota); color: var(--color-terracota); font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.1em; padding: 1rem 2rem; border-radius: 1.2rem; cursor: pointer; opacity: 0.6;">+ Aggiungi Opzione</button>`;
+            dContent.querySelectorAll('.tc-opt-input').forEach(inp => inp.oninput = (e) => { tcOptions[parseInt(e.target.dataset.idx)].text = e.target.value; });
+            dContent.querySelectorAll('[name="tc-correct"]').forEach(r => r.onchange = (e) => { tcCorrect = e.target.value; });
+            dContent.querySelectorAll('[data-remove-tc]').forEach(b => b.onclick = () => { tcOptions.splice(parseInt(b.dataset.removeTc), 1); if (parseInt(tcCorrect) >= tcOptions.length) tcCorrect = '0'; render(); });
             dContent.querySelector('#tc-add-opt').onclick = () => { tcOptions.push({ text: '' }); render(); };
-
         } else if (cType === 'error_correction') {
-            dContent.innerHTML = `
-                <div style="margin-bottom: 2.5rem;">
-                    <label class="teacher-label">Frase Scorretta (da mostrare all'allievo)</label>
-                    <textarea id="ec-incorrect" class="teacher-textarea" style="min-height: 8rem; color: #dc2626;" placeholder="Es: Io andare al mercato ieri"></textarea>
-                </div>
-                <div>
-                    <label class="teacher-label">Frase Corretta (soluzione)</label>
-                    <textarea id="ec-correct" class="teacher-textarea" style="min-height: 8rem; color: #16a34a;" placeholder="Es: Io sono andato al mercato ieri"></textarea>
-                </div>
-                <div style="font-family: var(--font-body); font-size: 1.1rem; opacity: 0.5; margin-top: 1.5rem;">L'allievo vedrà la frase scorretta e dovrà riscriverla correttamente.</div>
-            `;
+            dContent.innerHTML = `<div style="margin-bottom: 2.5rem;"><label class="teacher-label">Frase Scorretta</label><textarea id="ec-incorrect" class="teacher-textarea" style="min-height: 8rem; color: #dc2626;" placeholder="Es: Io andare al mercato ieri"></textarea></div><div><label class="teacher-label">Frase Corretta (soluzione)</label><textarea id="ec-correct" class="teacher-textarea" style="min-height: 8rem; color: #16a34a;" placeholder="Es: Io sono andato al mercato ieri"></textarea></div>`;
+        } else if (cType === 'speed') {
+            dContent.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;"><span class="teacher-label" style="margin: 0;">Palabras Veloces (Mín: 8, Máx: 15)</span><button id="add-speed" style="width: 3.6rem; height: 3.6rem; border-radius: 50%; border: 2px dashed var(--color-terracota); background: none; color: var(--color-terracota); font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button></div><div style="margin-bottom: 2rem;"><label class="teacher-label">Direzione</label><select id="speed-dir" class="teacher-input" style="font-size: 1.4rem;"><option value="it-es" ${speedDir === 'it-es' ? 'selected' : ''}>Italiano → Español</option><option value="es-it" ${speedDir === 'es-it' ? 'selected' : ''}>Español → Italiano</option></select></div><div id="speed-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>`;
+            const sList = dContent.querySelector('#speed-list');
+            const renderSpeedList = () => {
+                sList.innerHTML = '';
+                speedPairs.forEach((word, idx) => {
+                    const row = document.createElement('div'); row.className = 'teacher-card-row'; row.style.gridTemplateColumns = '1fr 1fr auto';
+                    row.innerHTML = `<input type="text" class="teacher-input" placeholder="Italiano" value="${word.it}" data-idx="${idx}" data-field="it" style="font-size: 1.4rem;"><input type="text" class="teacher-input" placeholder="Español" value="${word.es}" data-idx="${idx}" data-field="es" style="font-size: 1.4rem;"><button class="btn-remove" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; opacity: 0.25;" data-remove="${idx}">✕</button>`;
+                    sList.appendChild(row);
+                });
+                sList.querySelectorAll('.teacher-input').forEach(i => i.onchange = (e) => speedPairs[e.target.dataset.idx][e.target.dataset.field] = e.target.value);
+                sList.querySelectorAll('.btn-remove').forEach(b => b.onclick = (e) => { speedPairs.splice(e.target.closest('[data-remove]').dataset.remove, 1); renderSpeedList(); });
+            };
+            dContent.querySelector('#add-speed').onclick = () => { if (speedPairs.length < 15) { speedPairs.push({ it: '', es: '', source: 'manual', tatoebaId: null }); renderSpeedList(); } else toast.show("Massimo 15 parole", "error"); };
+            dContent.querySelector('#speed-dir').onchange = (e) => { speedDir = e.target.value; };
+            renderSpeedList();
         }
 
-        // Task list
-        const tList = main.querySelector('#tasks-list');
-        if (isLoading) {
-            tList.appendChild(LoadingSkeleton(5));
-        } else {
+        // Student selector wire (again, as main is new)
+        const studentSelect = main.querySelector('#student-select');
+        if (studentSelect) {
+            studentSelect.onchange = (e) => {
+                selectedStudentId = e.target.value;
+                studentName = students.find(s => s.id === selectedStudentId)?.name || studentName;
+                const head = main.querySelector('.teacher-tasks-header'); if (head) head.textContent = `Cammino di ${studentName}`;
+            };
+        }
+
+        // Wired event for Tatoeba search
+        const btnSearch = main.querySelector('#tatoeba-search-btn');
+        if (btnSearch) btnSearch.onclick = handleTatoebaSearch;
+
+        // Tatoeba ADD btn logic
+        main.querySelectorAll('.tatoeba-add-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                const idx = e.target.dataset.idx; const r = tatoebaResults[idx];
+                r.added = true;
+                if (cType === 'fill') {
+                    const blank = getLongestWord(r.italiano);
+                    fillSentences.push({ id: r.id, text: r.italiano, blank, source: 'tatoeba', tatoebaId: r.id, editMode: false });
+                } else if (cType === 'translation') {
+                    transPairs.push({ id: r.id, it: r.italiano, es: r.español, source: 'tatoeba', tatoebaId: r.id });
+                } else if (cType === 'speed') {
+                    if (speedPairs.length >= 15) { toast.show("Max 15 words", "error"); return; }
+                    speedPairs.push({ it: getLongestWord(r.italiano), es: getLongestWord(r.español), source: 'tatoeba', tatoebaId: r.id });
+                }
+                render();
+            };
+        });
+
+        // Task List Rendering
+        const taskListDiv = main.querySelector('#tasks-list');
+        if (isLoading) taskListDiv.appendChild(LoadingSkeleton(5));
+        else {
             tasks.forEach((task, index) => {
                 const card = document.createElement('div');
                 card.className = 'teacher-task-card';
-                card.style.animationDelay = `${index * 0.06}s`;
-                let sColor = 'var(--color-terracota)', bColor = 'white', sText = 'In sospeso';
-                let showDot = false;
+                card.style.animationDelay = `${index * 0.05}s`;
+                let sColor = 'var(--color-terracota)', bColor = 'white', sText = 'In sospeso', showDot = false;
                 const lowerType = task.type?.toLowerCase();
-                if (task.computedStatus === 'TO REVIEW') { 
-                    sText = 'DA CORREGGERE ✒️'; sColor = 'white'; bColor = 'var(--color-terracota)'; 
-                    showDot = true;
-                } else if (task.computedStatus === 'COMPLETED') { 
-                    sText = 'COMPLETATO ✓'; sColor = '#065f46'; bColor = '#ecfdf5'; 
-                }
-                card.innerHTML = `
-                    <div style="flex: 1; display: flex; align-items: center; gap: 2.5rem;">
-                        ${showDot ? '<div class="notif-dot"></div>' : '<div style="width: 0.9rem;"></div>'}
-                        <div>
-                            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.6rem;">
-                                <span style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.3; letter-spacing: 0.15em; text-transform: uppercase;">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
-                                <span style="background: ${bColor}; color: ${sColor}; padding: 0.3rem 1.2rem; border-radius: 0.6rem; font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid rgba(0,0,0,0.02); transition: all 0.3s;">${sText}</span>
-                            </div>
-                            <h5 style="font-family: var(--font-titles); font-size: 1.6rem; margin: 0; color: var(--color-ink); font-weight: 500;">${task.title}</h5>
-                        </div>
-                    </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 1.5rem; opacity: 0.3; transition: opacity 0.3s;" class="task-actions" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.3">
-                        <div style="font-size: 1.1rem; font-family: var(--font-ui); font-weight: 850;">${new Date(task.created_at).toLocaleDateString('it-IT')}</div>
-                        ${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" title="Modifica">✏️</button>` : ''}
-                        <button class="btn-delete-task" style="background: none; border: none; font-size: 1.4rem; cursor: pointer;" title="Elimina">🗑️</button>
-                    </div>
-                `;
+                if (task.computedStatus === 'TO REVIEW') { sText = 'DA CORREGGERE ✒️'; sColor = 'white'; bColor = 'var(--color-terracota)'; showDot = true; }
+                else if (task.computedStatus === 'COMPLETED') { sText = 'COMPLETATO ✓'; sColor = '#065f46'; bColor = '#ecfdf5'; }
+                card.innerHTML = `<div style="flex:1; display:flex; align-items:center; gap:2.5rem;">${showDot ? '<div class="notif-dot"></div>' : '<div style="width:0.9rem;"></div>'}<div><div style="display:flex; gap:1rem; align-items:center; margin-bottom:0.6rem;"><span style="font-family:var(--font-ui); font-size:1rem; font-weight:950; opacity:0.3; letter-spacing:0.15em; text-transform:uppercase;">${TYPE_TRANSLATIONS[lowerType] || task.type}</span><span style="background:${bColor}; color:${sColor}; padding:0.3rem 1.2rem; border-radius:0.6rem; font-family:var(--font-ui); font-size:0.95rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.02);">${sText}</span></div><h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5></div></div><div style="display:flex; align-items:center; gap:1.5rem; opacity:0.3;" class="task-actions"><div style="font-size:1.1rem; font-family:var(--font-ui); font-weight:850;">${new Date(task.created_at).toLocaleDateString('it-IT')}</div>${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">✏️</button>` : ''}<button class="btn-delete-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🗑️</button></div>`;
                 card.onclick = () => navigate(`/task/${task.id}`);
-                
-                const btnDel = card.querySelector('.btn-delete-task');
-                if (btnDel) btnDel.onclick = (e) => {
-                    e.stopPropagation();
-                    confirmModal.show(
-                        "Vuoi eliminare?", 
-                        `Sei seguro di voler eliminare "${task.title}"? L'azione è irreversibile.`,
-                        task.id
-                    );
-                };
-
-                const btnEdit = card.querySelector('.btn-edit-task');
-                if (btnEdit) btnEdit.onclick = (e) => {
-                    e.stopPropagation();
-                    editTaskId = task.id;
-                    const lType = task.type?.toLowerCase();
-                    if (lType.includes('role')) cType = 'roleplay';
-                    else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard';
-                    else if (lType === 'fill_choice') cType = 'fill_choice';
-                    else if (lType === 'order_sentence') cType = 'order_sentence';
-                    else if (lType === 'translation_choice') cType = 'translation_choice';
-                    else if (lType === 'error_correction') cType = 'error_correction';
-                    else cType = 'fill';
+                const btnD = card.querySelector('.btn-delete-task'); if (btnD) btnD.onclick = (e) => { e.stopPropagation(); confirmModal.show("Vuoi eliminare?", `Sei sicuro di voler eliminare "${task.title}"?`, task.id); };
+                const btnE = card.querySelector('.btn-edit-task'); if (btnE) btnE.onclick = (e) => {
+                    e.stopPropagation(); editTaskId = task.id; const lType = task.type?.toLowerCase();
+                    if (lType.includes('role')) cType = 'roleplay'; else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard'; else if (lType === 'fill_choice') cType = 'fill_choice'; else if (lType === 'order_sentence') cType = 'order_sentence'; else if (lType === 'translation_choice') cType = 'translation_choice'; else if (lType === 'error_correction') cType = 'error_correction'; else if (lType === 'translation') cType = 'translation'; else if (lType === 'speed') cType = 'speed'; else cType = 'fill';
                     
-                    if (cType === 'flashcard') flashcards = task.content?.items || task.content?.cards || [{ word: '', translation: '', example: '' }];
-                    else if (cType === 'fill_choice') {
-                        fillChoices = task.content?.gaps || [];
-                        fcText = task.content?.text || "";
-                    } else if (cType === 'translation_choice') {
-                        const opts = task.content?.options || [];
-                        tcOptions = opts.map(t => ({ text: t }));
-                        const corIdx = opts.indexOf(task.content?.correct);
-                        tcCorrect = corIdx !== -1 ? String(corIdx) : '';
-                    }
-                    
+                    if (cType === 'flashcard') flashcards = task.content?.items || [];
+                    else if (cType === 'fill_choice') { fillChoices = task.content?.gaps || []; fcText = task.content?.text || ""; }
+                    else if (cType === 'translation_choice') { const opts = task.content?.options || []; tcOptions = opts.map(t => ({ text: t })); const cor = opts.indexOf(task.content?.correct); tcCorrect = cor !== -1 ? String(cor) : ''; }
+                    else if (cType === 'fill') fillSentences = task.content?.sentences || [{ id: Date.now(), text: task.content?.text || '', blank: '', source: 'manual', editMode: true }];
+                    else if (cType === 'translation') { transPairs = task.content?.pairs || []; transDir = task.content?.direction || 'it-es'; }
+                    else if (cType === 'speed') { speedPairs = task.content?.words || []; speedDir = task.content?.direction || 'it-es'; }
                     render();
-                    
                     setTimeout(() => {
-                        const titleInput = container.querySelector('#task-title');
-                        if (titleInput) titleInput.value = task.title;
-                        
-                        const rpDesc = container.querySelector('#rp-desc');
-                        if (cType === 'roleplay' && rpDesc) rpDesc.value = task.content?.description || '';
-                        
-                        const ft = container.querySelector('#fill-text');
-                        if (cType === 'fill' && ft) ft.value = task.content?.text || '';
-                        
-                        const os = container.querySelector('#os-text');
-                        if (cType === 'order_sentence' && os) os.value = task.content?.original || task.content?.correctOrder?.join(' ') || '';
-
-                        const tcQ = container.querySelector('#tc-question');
-                        if (cType === 'translation_choice' && tcQ) tcQ.value = task.content?.question || '';
-
-                        const ecI = container.querySelector('#ec-incorrect');
-                        const ecC = container.querySelector('#ec-correct');
-                        if (cType === 'error_correction' && ecI && ecC) {
-                            ecI.value = task.content?.incorrect || '';
-                            ecC.value = task.content?.correct || '';
-                        }
-                        
+                        const tInp = container.querySelector('#task-title'); if (tInp) tInp.value = task.title;
+                        const rD = container.querySelector('#rp-desc'); if (cType === 'roleplay' && rD) rD.value = task.content?.description || '';
+                        const ft = container.querySelector('#fill-text'); if (cType === 'fill' && ft) ft.value = task.content?.text || '';
+                        const os = container.querySelector('#os-text'); if (cType === 'order_sentence' && os) os.value = task.content?.original || '';
+                        const tcQ = container.querySelector('#tc-question'); if (cType === 'translation_choice' && tcQ) tcQ.value = task.content?.question || '';
+                        const ecI = container.querySelector('#ec-incorrect'); const ecC = container.querySelector('#ec-correct'); if (cType === 'error_correction' && ecI && ecC) { ecI.value = task.content?.incorrect || ''; ecC.value = task.content?.correct || ''; }
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }, 50);
                 };
-
-                tList.appendChild(card);
+                taskListDiv.appendChild(card);
             });
         }
 
-        // Event listeners
-        main.querySelectorAll('.teacher-chip').forEach(chip => chip.onclick = (e) => { cType = e.target.closest('.teacher-chip').dataset.type; render(); });
+        main.querySelectorAll('.teacher-chip').forEach(chip => chip.onclick = (e) => { cType = e.currentTarget.dataset.type; render(); });
         main.querySelector('#btn-assign').onclick = handleCreateTask;
         sidebar.querySelector('#btn-nav-students').onclick = () => navigate('/student/stats');
         sidebar.querySelector('#btn-logout').onclick = async () => { await signOut(); localStorage.removeItem('luci_user'); navigate('/login'); };
@@ -556,6 +684,41 @@ export const GiancarloDashboard = (navigate, user) => {
 
         container.appendChild(sidebar);
         container.appendChild(main);
+
+        // Event Listeners for Notifications
+        const bell = main.querySelector('#notif-bell');
+        const dropdown = main.querySelector('#notif-dropdown');
+        if (bell && dropdown) {
+            bell.onclick = (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+            };
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#notif-dropdown') && !e.target.closest('#notif-bell')) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        }
+
+        const clearBtn = main.querySelector('#clear-all');
+        if (clearBtn) {
+            clearBtn.onclick = async (e) => {
+                e.stopPropagation();
+                const { success } = await clearAllNotifications(user.id);
+                if (success) {
+                    notifications = [];
+                    renderNotifications();
+                }
+            };
+        }
+
+        // Subscriptions
+        cleanupOldNotifications();
+        loadNotifications();
+        const sub = subscribeToNotifications(user.id, () => {
+            loadNotifications();
+        });
+
         if (!document.body.contains(modal.overlay)) document.body.appendChild(modal.overlay);
         if (!document.body.contains(pModal.overlay)) document.body.appendChild(pModal.overlay);
     };

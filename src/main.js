@@ -13,6 +13,8 @@ import { CorrectionsHistoryPage } from './pages/CorrectionsHistory';
 
 import { getSession, getProfile, signOut } from './services/supabase';
 import { FullScreenLoading } from './components/Loading';
+import { toast } from './components/Toast';
+
 
 const app = document.getElementById('app');
 
@@ -27,7 +29,57 @@ const navigate = (path) => {
     }, 600);
 };
 
+// --- Inactivity Timer Logic ---
+let inactivityTimer = null;
+const INACTIVITY_LIMIT = 60 * 60 * 1000; // 60 minutes
+const LAST_ACTIVITY_KEY = 'luci_last_activity';
+
+const resetInactivityTimer = () => {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    // Don't update if we're on the login page (prevents keeping session alive accidentally during login)
+    if (window.location.hash !== '#/login') {
+        localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    }
+    inactivityTimer = setTimeout(handleInactivitySignOut, INACTIVITY_LIMIT);
+};
+
+const handleInactivitySignOut = async () => {
+    const { data } = await getSession();
+    if (data?.session) {
+        await signOut();
+        localStorage.removeItem('luci_user');
+        localStorage.removeItem(LAST_ACTIVITY_KEY);
+        toast.show("Sessione terminata per inattività (60 min) 🏛️", "info");
+        window.location.hash = '#/login';
+    }
+};
+
+const checkPersistentInactivity = async () => {
+    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+    if (lastActivity && window.location.hash !== '#/login') {
+        const diff = Date.now() - parseInt(lastActivity, 10);
+        if (diff > INACTIVITY_LIMIT) {
+            await handleInactivitySignOut();
+            return true;
+        }
+    }
+    return false;
+};
+
+// Attach listeners to common user interactions
+['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(name => {
+    document.addEventListener(name, resetInactivityTimer, true);
+});
+// Start the initial timer
+resetInactivityTimer();
+
+
+
 const render = async () => {
+    // Check if session has expired due to persistent inactivity
+    const hasExpired = await checkPersistentInactivity();
+    if (hasExpired) return;
+
     const rawPath = window.location.hash || '#/login';
     const path = rawPath.replace('#', '') || '/login';
 
@@ -35,6 +87,7 @@ const render = async () => {
     try {
         const sessionRes = await getSession();
         session = sessionRes.data;
+
 
         if (session) {
             const cachedProfile = localStorage.getItem('luci_user');
@@ -71,7 +124,19 @@ const render = async () => {
         app.appendChild(DashboardPage(navigate, profile));
     } else if (path.startsWith('/task/')) {
         const taskId = path.split('/')[2];
-        app.appendChild(TaskDetailsPage(navigate, profile, { id: taskId }));
+        if (profile.role === 'teacher') {
+            app.appendChild(TaskDetailsPage(navigate, profile, { id: taskId }));
+        } else {
+            // Students shouldn't usually land here, but if they do, we can redirect or show dashboard
+            window.location.hash = '#/dashboard';
+        }
+    } else if (path.startsWith('/assignment/')) {
+        const assignId = path.split('/')[2];
+        // This is a special virtual route for students to open the modal directly on dashboard
+        window.location.hash = '#/dashboard';
+        // We'll handle the actual opening in the Dashboard component by looking at the URL or a shared state
+        // For now, let's keep it simple and ensure the Dashboard knows which one to open
+        localStorage.setItem('open_assignment_id', assignId);
     } else if (path === '/student/stats') {
         app.appendChild(StudentStatsPage(navigate, profile));
     } else if (path === '/mis-correcciones') {

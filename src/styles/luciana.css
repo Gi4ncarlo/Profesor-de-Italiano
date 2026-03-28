@@ -23,8 +23,9 @@
   color: var(--color-bordo); margin-bottom: 1.5rem; display: block;
 }
 .luciana-header h1 {
-  font-family: var(--font-heading); font-size: 4rem;
-  font-weight: 600; color: var(--color-ink); margin-bottom: 1rem; letter-spacing: -0.5px;
+  font-family: var(--font-heading); font-size: clamp(3rem, 5vw, 4rem);
+  font-weight: 700; color: var(--color-ink); margin-bottom: 1rem; letter-spacing: -0.5px;
+  line-height: 1;
 }
 .luciana-header p {
   font-family: var(--font-body); font-size: 1.05rem; font-weight: 800;
@@ -34,20 +35,20 @@
 /* Lucky number 4 badge */
 .luciana-lucky-badge {
   display: inline-flex; align-items: center; gap: 0.6rem;
-  background: linear-gradient(135deg, var(--color-bordo) 0%, #8B1A2B 100%);
+  background: linear-gradient(135deg, var(--color-bordo) 0%, #4a0b19 100%);
   color: white; padding: 0.5rem 1.4rem; border-radius: 2rem;
-  font-family: var(--font-body); font-size: 1rem; font-weight: 600;
+  font-family: var(--font-body); font-size: 1.1rem; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase;
-  box-shadow: 0 4px 12px rgba(107, 16, 36, 0.2);
+  box-shadow: 0 4px 12px rgba(107, 16, 36, 0.25);
   margin-left: 1rem; vertical-align: middle;
 }
 
 /* Tasks section */
 .luciana-section-title {
   font-family: var(--font-heading); font-size: 2.4rem;
-  font-weight: 500;
+  font-weight: 500; font-style: italic;
   margin-bottom: 2.5rem; padding-bottom: 1.2rem;
-  border-bottom: 1.5px solid rgba(107, 16, 36, 0.08);
+  border-bottom: 1.5px solid rgba(122, 139, 90, 0.15);
 }
 
 /* Task cards */
@@ -58,11 +59,12 @@
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   animation: fadeInTask 0.5s ease-out forwards; opacity: 0;
   border: 1px solid rgba(0,0,0,0.01);
+  border-left: 5px solid transparent;
 }
 .luciana-task-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 12px 30px rgba(107, 16, 36, 0.08);
-  border-bottom: 3px solid var(--color-bordo);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-left-color: var(--color-bordo);
 }
 
 /* Status badges */
@@ -71,7 +73,7 @@
   font-family: var(--font-body); font-size: 1rem; font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;
 }
-.luciana-badge--pending { background: rgba(107, 16, 36, 0.08); color: var(--color-bordo); }
+.luciana-badge--pending { background: rgba(122, 139, 90, 0.1); color: var(--color-oliva); }
 .luciana-badge--submitted { background: #f0f4e8; color: #6b7a4d; }
 .luciana-badge--reviewed { background: var(--color-parchment); color: #5B4E3E; opacity: 0.6; }
 
@@ -101,12 +103,12 @@
 .luciana-quote {
   background: var(--color-parchment); padding: 2.5rem;
   border-radius: 2rem; width: 100%;
-  border-left: 5px solid var(--color-bordo);
+  border-left: 5px solid var(--color-oliva);
   box-shadow: 6px 6px 24px rgba(0,0,0,0.02);
 }
 .luciana-quote p {
   font-family: var(--font-handwritten); font-size: 1.8rem;
-  color: var(--color-bordo); line-height: 1.35; margin: 0;
+  color: var(--color-oliva); line-height: 1.35; margin: 0;
   font-style: italic;
 }
 
@@ -114,7 +116,7 @@
 .luciana-four-deco {
   position: absolute; bottom: -2rem; right: -1rem; z-index: 0;
   font-family: var(--font-titles); font-size: 18rem;
-  color: rgba(107, 16, 36, 0.03); font-weight: 700;
+  color: rgba(122, 139, 90, 0.04); font-weight: 700;
   line-height: 1; pointer-events: none; user-select: none;
 }
 
@@ -135,4 +137,257 @@
 .luciana-tab.active::after {
   content: ''; position: absolute; bottom: -1.5px; left: 0; width: 100%; height: 2.5px;
   background: var(--color-bordo); border-radius: 4px;
+}
+
+/* ─── FLASHCARDS FLIP ANIMATION ─── */
+.flashcard-container {
+  perspective: 1000px;
+  cursor: pointer;
+  height: 380px;
+}
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+}
+.flashcard-container.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+.flashcard-front, .flashcard-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3.5rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.04);
+  border: 1.5px solid rgba(0,0,0,0.015);
+  background: white;
+}
+.flashcard-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(145deg, #ffffff 0%, #fff9f5 100%);
+}
+
+.flashcard-pulse {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 12px;
+  height: 12px;
+  background: var(--color-terracota);
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(196, 96, 58, 0.4);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(196, 96, 58, 0.7); transform: scale(0.95); }
+  70% { box-shadow: 0 0 0 15px rgba(196, 96, 58, 0); transform: scale(1); }
+  100% { box-shadow: 0 0 0 0 rgba(196, 96, 58, 0); transform: scale(0.95); }
+}
+
+.flashcard-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(196, 96, 58, 0.08);
+  color: var(--color-terracota);
+  padding: 0.6rem 1.4rem;
+  border-radius: 2rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ─── CELEBRATION EFFECTS ─── */
+.confetti-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    border-radius: 4px;
+    animation: confetti-fall 2.2s cubic-bezier(0.1, 0.5, 0.4, 1) forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0);
+        opacity: 0;
+    }
+}
+
+.submit-success-flare {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(196, 96, 58, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 9999;
+    pointer-events: none;
+    animation: flare-out 0.8s ease-out forwards;
+}
+
+@keyframes flare-out {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: 150vw; height: 150vw; opacity: 0; }
+}
+
+.btn-primary.celebrating {
+    animation: btn-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes btn-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.85); background: var(--color-ink); }
+    100% { transform: scale(1.1); }
+}
+
+/* ─── PREMIUM BUTTON: CONSEGNARE ─── */
+.btn-primary {
+    position: relative;
+    background: var(--color-ink) !important;
+    color: white !important;
+    border: none !important;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    box-shadow: 0 10px 30px rgba(28, 15, 7, 0.15), 0 4px 8px rgba(28, 15, 7, 0.1) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary::before {
+    content: '✒️';
+    position: absolute;
+    left: -3rem;
+    opacity: 0;
+    transition: all 0.4s ease;
+    font-size: 1.6rem;
+}
+
+.btn-primary:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    background: var(--color-bordo) !important;
+    padding-left: 7.5rem !important;
+    padding-right: 5rem !important;
+    box-shadow: 0 20px 40px rgba(107, 16, 36, 0.25), 0 10px 15px rgba(107, 16, 36, 0.15) !important;
+}
+
+.btn-primary:hover::before {
+    left: 2.5rem;
+    opacity: 1;
+}
+
+.btn-primary:active {
+    transform: translateY(-1px) scale(0.96) !important;
+}
+
+/* ─── Ordina Frase Tokens ─── */
+.os-word-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.4rem 3.2rem;
+    background: white;
+    border: 2px solid rgba(0,0,0,0.06);
+    border-radius: 2.2rem;
+    font-family: var(--font-body);
+    font-size: 2.4rem;
+    color: var(--color-ink);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+    margin: 0.6rem;
+    position: relative;
+}
+
+.os-word-token:hover:not(.disabled):not(.selected) {
+    transform: translateY(-5px) scale(1.04);
+    box-shadow: 0 12px 30px rgba(107, 16, 36, 0.12);
+    border-color: rgba(107, 16, 36, 0.25);
+    color: var(--color-bordo);
+}
+
+.os-word-token.selected {
+    opacity: 0.35;
+    transform: scale(0.96);
+    background: rgba(0,0,0,0.03);
+    box-shadow: none;
+    pointer-events: none;
+    border-color: rgba(0,0,0,0.05);
+}
+
+.os-word-token.disabled {
+    cursor: default;
+    pointer-events: none;
+}
+
+.os-target-zone-token {
+    cursor: pointer !important;
+    animation: coutureScaleIn 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    pointer-events: auto !important;
+}
+
+.os-target-zone-token:hover {
+    background: #fff1f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+}
+
+.os-target-zone-token::after {
+    content: '×';
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    background: #dc2626;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-weight: 900;
+    font-family: var(--font-ui);
+    transform: scale(0.4);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.os-target-zone-token:hover::after {
+    opacity: 1;
+    transform: scale(1);
 }

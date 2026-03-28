@@ -14,8 +14,9 @@
 
 .teacher-header { margin-bottom: 4rem; }
 .teacher-header h1 {
-  font-family: var(--font-heading); font-size: 4rem;
-  font-weight: 600; color: var(--color-ink); margin-bottom: 0.8rem; letter-spacing: -0.5px;
+  font-family: var(--font-heading); font-size: clamp(3rem, 5vw, 4rem);
+  font-weight: 700; color: var(--color-ink); margin-bottom: 0.8rem; letter-spacing: -0.5px;
+  line-height: 1;
 }
 .teacher-header p {
   font-family: var(--font-body); font-size: 1.05rem; font-weight: 800;
@@ -74,17 +75,17 @@
 
 /* Assign Button */
 .teacher-assign-btn {
-  background: var(--color-ink); color: white; border: none;
-  padding: 1.2rem 3rem; border-radius: 50px; cursor: pointer;
-  font-family: var(--font-body); font-size: 1.1rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.15em;
+  background: var(--color-terracota); color: var(--color-parchment); border: none;
+  padding: 1.2rem 3rem; border-radius: 6px; cursor: pointer;
+  font-family: var(--font-body); font-size: 1.2rem; font-weight: 600;
+  text-transform: none; letter-spacing: 0.3px;
   transition: all 0.4s;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 12px rgba(196, 96, 58, 0.2);
   display: flex; align-items: center; gap: 0.8rem;
 }
 .teacher-assign-btn:hover {
-  background: var(--color-terracota); transform: translateY(-2px);
-  box-shadow: 0 14px 35px rgba(166, 77, 50, 0.3);
+  background: #A64B29; transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(196, 96, 58, 0.3);
 }
 
 /* Flashcard rows */
@@ -102,16 +103,17 @@
 }
 .teacher-task-card {
   background: white; padding: 1.6rem 2rem; border-radius: 1.6rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+  box-shadow: var(--shadow-card);
   cursor: pointer; display: flex; justify-content: space-between; align-items: center;
   transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
   animation: fadeInTask 0.5s ease-out forwards; opacity: 0;
-  border: 1px solid rgba(166, 77, 50, 0.03);
+  border: 1px solid rgba(196, 96, 58, 0.03);
+  border-left: 5px solid transparent;
 }
 .teacher-task-card:hover {
-  transform: translateX(6px);
-  box-shadow: 0 10px 30px rgba(166,77,50,0.07);
-  border-left: 4px solid var(--color-terracota);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-left-color: var(--color-terracota);
 }
 
 /* Pulse Notification */

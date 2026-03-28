@@ -101,6 +101,7 @@ export const getSubmissionsByTask = async (taskId) => {
                     id,
                     answers,
                     created_at,
+                    status,
                     feedback (
                         id,
                         comment,
@@ -112,27 +113,36 @@ export const getSubmissionsByTask = async (taskId) => {
 
         if (error) throw error;
 
-        // Flatten assignments to a pure list of submissions
-        const res = [];
+        const results = [];
         data.forEach(assignment => {
-            const submissionsArr = assignment.submissions || [];
-            submissionsArr.forEach(sub => {
-                res.push({
-                    ...sub,
-                    student: assignment.student, // This should be { name: "..." } or null
-                    assignment_id: assignment.id
+            const subs = assignment.submissions || [];
+            
+            if (subs.length === 0) {
+                // If it's just an assignment with NO submission
+                results.push({
+                    id: `pending-${assignment.id}`,
+                    assignment_id: assignment.id,
+                    student: assignment.student,
+                    profiles: assignment.student,
+                    status: 'pending',
+                    created_at: null,
+                    answers: null
                 });
-            });
+            } else {
+                // Flatten submissions
+                subs.forEach(sub => {
+                    results.push({
+                        ...sub,
+                        student: assignment.student,
+                        profiles: assignment.student,
+                        assignment_id: assignment.id,
+                        content: sub.answers
+                    });
+                });
+            }
         });
 
-        // Ensure consistency with teacher dashboard views
-        const formatted = res.map(sub => ({
-            ...sub,
-            profiles: sub.student, // Mapping for TaskDetails.js compatibility
-            content: sub.answers 
-        }));
-
-        return { data: formatted.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)), error: null };
+        return { data: results.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)), error: null };
     } catch (err) {
         return { data: null, error: handleSupabaseError(err, 'GetSubmissionsByTask') };
     }

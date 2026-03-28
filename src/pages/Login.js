@@ -96,7 +96,9 @@ export const LoginPage = (navigate) => {
                     const { data: profile, error: pError } = await getProfile(data.user.id);
                     if (pError) throw new Error(pError);
                     localStorage.setItem('luci_user', JSON.stringify(profile));
+                    localStorage.setItem('luci_last_activity', Date.now().toString());
                     toast.show(`Benvenuto, ${profile.name}! 👋`);
+
                 } else {
                     const name = form.querySelector('#name').value.trim();
                     const { error } = await signUp(email, password, name);

@@ -1,6 +1,9 @@
 import { Header } from '../components/Header';
 import { getStudentCorrections } from '../services/submissions';
 import { LoadingSkeleton } from '../components/Loading';
+import { ProfileModal } from '../components/ProfileModal';
+import { updateProfile } from '../services/supabase';
+import { toast } from '../components/Toast';
 
 const TYPE_TRANSLATIONS = {
     'fill': 'Completare', 'roleplay': 'Conversazione',
@@ -8,7 +11,10 @@ const TYPE_TRANSLATIONS = {
     'order_sentence': 'Ordina Frase',
     'translation_choice': 'Traduzione',
     'error_correction': 'Correzione',
-    'fill_choice': 'Scelta Multipla'
+    'fill_choice': 'Scelta Multipla',
+    'dictation': 'Dettato',
+    'memory': 'Memoria',
+    'speed': 'Velocità'
 };
 
 const TYPE_ICONS = {
@@ -17,7 +23,10 @@ const TYPE_ICONS = {
     'order_sentence': '🧩',
     'translation_choice': '🌍',
     'error_correction': '✏️',
-    'fill_choice': '✅'
+    'fill_choice': '✅',
+    'dictation': '🎧',
+    'memory': '🃏',
+    'speed': '⚡'
 };
 
 export const CorrectionsHistoryPage = (navigate, user) => {
@@ -31,6 +40,22 @@ export const CorrectionsHistoryPage = (navigate, user) => {
     let filteredCorrections = [];
     let isLoading = true;
     let filter = 'Tutte';
+
+    const pModal = ProfileModal(user, async (newName, newAvatar) => {
+        try {
+            const { data, error } = await updateProfile(user.id, { 
+                name: newName, 
+                avatar_url: newAvatar || user.avatar_url 
+            });
+            if (error) throw error;
+            
+            // Sync local state
+            Object.assign(user, data);
+            localStorage.setItem('luci_user', JSON.stringify(user));
+            render();
+            toast.show("Profilo aggiornato! ✨");
+        } catch (err) { console.error(err); toast.show("Errore profilo.", "error"); }
+    });
 
     const refresh = async () => {
         isLoading = true; render();
@@ -48,19 +73,102 @@ export const CorrectionsHistoryPage = (navigate, user) => {
         } else {
             // Simplified mapping for the Pills
             const map = {
-                'Roleplay': ['roleplay', 'conversazione'],
-                'Flashcards': ['flashcard', 'flashcards', 'lessico'],
-                'Frases': ['fill', 'completare', 'order_sentence', 'error_correction', 'fill_choice', 'translation_choice']
+                'Traduzioni': ['translation', 'translation_choice'],
+                'Esercizi': ['fill', 'fill_choice', 'order_sentence', 'error_correction', 'dictation', 'memory'],
+                'Lessico': ['flashcard', 'flashcards'],
+                'Conversazione': ['roleplay'],
+                'Velocità': ['speed']
             };
             const targets = map[filter] || [];
             filteredCorrections = corrections.filter(c => targets.includes(c.task.type?.toLowerCase()));
         }
     };
 
+    const clean = (s) => String(s || "").toLowerCase().replace(/[.,!?;]/g, '').trim();
+
     const renderAnswers = (c) => {
         const type = c.task.type?.toLowerCase();
         const ans = c.answers;
         if (!ans) return '<p style="opacity:0.5;">Nessuna risposta salvata.</p>';
+
+        if (type === 'order_sentence') {
+            const content = c.task.content || {};
+            const correctText = content.original || content.text || content.correct_sentence || "";
+            const correctArray = content.correctOrder || (correctText ? correctText.split(/\s+/) : []);
+            const studentWords = Array.isArray(ans) ? ans : (ans?.data || []);
+            
+            const isCorrect = studentWords.length === correctArray.length && studentWords.every((w, i) => clean(w) === clean(correctArray[i]));
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                        ${studentWords.map((w, i) => {
+                            const isWordCorrect = correctArray[i] && clean(w) === clean(correctArray[i]);
+                            const borderColor = isWordCorrect ? '#10b981' : '#ef4444';
+                            const bgColor = isWordCorrect ? '#f0fdf4' : '#fff1f2';
+                            return `
+                                <div style="
+                                    padding: 0.8rem 1.6rem; background: ${bgColor}; border-radius: 12px;
+                                    border: 1.5px solid ${borderColor};
+                                    font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink);
+                                    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+                                ">${w}</div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ${!isCorrect ? `
+                        <div style="margin-top: 1rem; padding: 1.8rem; background: #ecfdf5; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.1);">
+                            <span style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 900; color: #065f46; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 0.5rem;">ORDINE CORRETTO 💡</span>
+                            <div class="font-editorial" style="font-size: 1.6rem; color: #064e3b; line-height: 1.3;">
+                                "${correctText || correctArray.join(' ')}"
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        if (type === 'speed') {
+            let data = { score: 0, completedIndices: [] };
+            try {
+                const src = ans?.data || ans;
+                if (typeof src === 'string' && src.startsWith('{')) {
+                    data = JSON.parse(src);
+                } else if (typeof src === 'object' && src !== null) {
+                    data = src;
+                } else {
+                    data = { score: Number(src) || 0, completedIndices: [] };
+                }
+            } catch(e) {
+                data = { score: Number(ans) || 0, completedIndices: [] };
+            }
+            
+            const words = c.task.content?.words || [];
+            const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
+            const score = data.score || completedIndices.length;
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <div style="font-family: var(--font-body); font-size: 1.8rem; color: var(--color-terracota); font-weight: 700; margin-bottom: 1rem;">
+                        Hai tradotto ${score} parole! ⚡
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
+                        ${words.map((w, i) => {
+                            const isDone = completedIndices.includes(Number(i));
+                            const color = isDone ? '#10b981' : '#ef4444';
+                            const bgColor = isDone ? '#f0fdf4' : '#fff1f2';
+                            return `
+                                <div style="padding: 1.2rem; border-radius: 12px; background: ${bgColor}; border: 1px solid ${color}33; display: flex; flex-direction: column; gap: 0.3rem;">
+                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: var(--color-ink); font-weight: 600;">${c.task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
+                                    <div style="height: 1px; background: ${color}22; margin: 0.2rem 0;"></div>
+                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: ${color}; font-weight: 800;">${c.task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         if (type === 'roleplay' || type === 'conversazione' || type === 'error_correction') {
             return `<div style="font-family: var(--font-body); line-height: 1.6;">${ans}</div>`;
@@ -75,7 +183,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
 
     const render = () => {
         container.innerHTML = '';
-        container.appendChild(Header(navigate, user));
+        container.appendChild(Header(navigate, user, { onProfile: () => pModal.open(user) }));
 
         const content = document.createElement('div');
         
@@ -91,12 +199,12 @@ export const CorrectionsHistoryPage = (navigate, user) => {
 
             <!-- FILTERS -->
             <div style="display: flex; gap: 1.2rem; justify-content: center; margin-bottom: 5rem;">
-                ${['Tutte', 'Roleplay', 'Flashcards', 'Frases'].map(p => `
+                ${['Tutte', 'Traduzioni', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(p => `
                     <button class="pill-filter ${filter === p ? 'active' : ''}" data-val="${p}" style="
                         padding: 1rem 2.8rem; border-radius: 50px; border: 1.5px solid ${filter === p ? 'var(--color-bordo)' : 'rgba(0,0,0,0.06)'};
                         background: ${filter === p ? 'var(--color-bordo)' : 'white'};
                         color: ${filter === p ? 'white' : 'var(--color-ink)'};
-                        font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.1em;
+                        font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.1em;
                         cursor: pointer; transition: all 0.25s;
                     ">${p}</button>
                 `).join('')}
@@ -231,6 +339,8 @@ export const CorrectionsHistoryPage = (navigate, user) => {
             `;
             document.head.appendChild(style);
         }
+
+        if (!document.body.contains(pModal.overlay)) document.body.appendChild(pModal.overlay);
     };
 
     refresh();

@@ -10,7 +10,7 @@ export const Header = (navigate, user, { onProfile } = {}) => {
     const el = document.createElement('header');
     el.style.cssText = `
         display: flex; justify-content: space-between; align-items: center;
-        padding: 4rem 0; margin-bottom: 5rem; border-bottom: 1px solid rgba(0,0,0,0.03);
+        padding: 4.5rem 0; margin-bottom: 6rem; border-bottom: 1.5px solid rgba(0,0,0,0.04);
     `;
 
     // Dynamic Greeting based on role (Teacher = Benvenuto, Student = Benvenuta)
@@ -79,23 +79,23 @@ export const Header = (navigate, user, { onProfile } = {}) => {
     };
 
     el.innerHTML = `
-        <div style="font-family: var(--font-titles); font-size: 2.2rem; cursor:pointer;" id="go-home">
-           El Rincón de <span style="color: var(--color-dorado-viejo); font-style: italic;">Luci</span>
+        <div style="font-family: var(--font-titles); font-size: 2.6rem; cursor:pointer; letter-spacing: -0.02em;" id="go-home">
+           El Rincón de <span style="color: var(--color-dorado-viejo); font-style: italic; font-weight: 500;">Luci</span>
         </div>
         
-        <div style="display: flex; gap: 3.5rem; align-items: center; font-family: var(--font-ui); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">
+        <div style="display: flex; gap: 4.5rem; align-items: center; font-family: var(--font-ui); font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase;">
             <div style="position: relative;">
-                <div class="notification-bell-container" id="notif-bell">
-                    <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                    <div class="notification-badge" id="notif-count" style="display:none;">0</div>
+                <div class="notification-bell-container" id="notif-bell" style="width: 3.5rem; height: 3.5rem; display: flex; align-items: center; justify-content: center; background: white; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;">
+                    <svg style="width: 1.8rem; height: 1.8rem; fill: var(--color-ink); opacity: 0.7;" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                    <div class="notification-badge" id="notif-count" style="display:none; position: absolute; top: -0.2rem; right: -0.2rem; background: var(--color-bordo); color: white; width: 1.8rem; height: 1.8rem; border-radius: 50%; font-size: 0.75rem; align-items: center; justify-content: center; border: 2px solid white; font-weight: 900;">0</div>
                 </div>
                 
-                <div class="notification-dropdown" id="notif-dropdown">
-                    <div class="notification-header" style="justify-content: space-between;">
+                <div class="notification-dropdown" id="notif-dropdown" style="top: 130%;">
+                    <div class="notification-header" style="justify-content: space-between; font-size: 1.1rem; padding: 2rem 2.5rem;">
                         <span>Notifiche</span>
                         <div>
-                            <span id="clear-all" style="cursor:pointer; margin-right: 1.5rem; text-decoration: underline;">Svuota</span>
-                            <span id="close-notif" style="cursor:pointer; font-size: 1.2rem;">×</span>
+                            <span id="clear-all" style="cursor:pointer; margin-right: 1.5rem; text-decoration: underline; opacity: 0.6;">Svuota</span>
+                            <span id="close-notif" style="cursor:pointer; font-size: 1.4rem;">×</span>
                         </div>
                     </div>
 
@@ -105,10 +105,16 @@ export const Header = (navigate, user, { onProfile } = {}) => {
                 </div>
             </div>
 
-            <div style="display: flex; gap: 2rem; align-items: center; opacity: 0.6;">
-                <span style="opacity: 0.5;">${greeting}, ${user.role === 'teacher' ? teacherName : user.name}</span>
-                <button id="profile-btn" style="background:none; border:none; cursor:pointer; color: var(--color-ink); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.1em;">Profilo</button>
-                <button id="logout-btn" style="background:none; border:none; cursor:pointer; color: var(--color-terracota); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.1em;">Esci</button>
+            <div style="display: flex; gap: 3rem; align-items: center;">
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <span style="opacity: 0.15; font-size: 0.7rem; font-weight: 900; margin-bottom: 0.2rem;">${greeting.toUpperCase()}</span>
+                    <span style="font-weight: 700; color: var(--color-ink); font-size: 1.1rem;">${user.role === 'teacher' ? teacherName : user.name}</span>
+                </div>
+                <div style="width: 1.5px; height: 2.5rem; background: rgba(0,0,0,0.06);"></div>
+                <div style="display: flex; gap: 2.5rem;">
+                    <button id="profile-btn" style="background:none; border:none; cursor:pointer; color: var(--color-ink); font-weight: 700; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Profilo</button>
+                    <button id="logout-btn" style="background:none; border:none; cursor:pointer; color: var(--color-terracota); font-weight: 700; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Esci</button>
+                </div>
             </div>
         </div>
     `;
