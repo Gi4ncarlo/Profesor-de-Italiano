@@ -1,0 +1,138 @@
+/* ─── LUCIANA DASHBOARD STYLES ─── */
+.luciana-main {
+  background: white; border-radius: 2.8rem;
+  margin: 2.5rem auto; /* Center it in the viewport area after padding */
+  padding: 5.5rem 7.5rem;
+  box-shadow: var(--shadow-premium);
+  border: 1px solid rgba(0,0,0,0.02);
+  min-height: calc(100vh - 5rem);
+  max-width: 145rem;
+  width: 100%;
+  position: relative; overflow: hidden;
+}
+.luciana-main::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+  opacity: 0.03; pointer-events: none;
+}
+.luciana-grid { display: grid; grid-template-columns: 1fr 30rem; gap: 7.5rem; align-items: start; position: relative; z-index: 1; }
+
+/* Header */
+.luciana-date {
+  font-family: var(--font-body); font-size: 1.2rem; font-weight: 600;
+  color: var(--color-bordo); margin-bottom: 1.5rem; display: block;
+}
+.luciana-header h1 {
+  font-family: var(--font-heading); font-size: 4rem;
+  font-weight: 600; color: var(--color-ink); margin-bottom: 1rem; letter-spacing: -0.5px;
+}
+.luciana-header p {
+  font-family: var(--font-body); font-size: 1.05rem; font-weight: 800;
+  opacity: 0.3; text-transform: uppercase; letter-spacing: 0.25em;
+}
+
+/* Lucky number 4 badge */
+.luciana-lucky-badge {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  background: linear-gradient(135deg, var(--color-bordo) 0%, #8B1A2B 100%);
+  color: white; padding: 0.5rem 1.4rem; border-radius: 2rem;
+  font-family: var(--font-body); font-size: 1rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(107, 16, 36, 0.2);
+  margin-left: 1rem; vertical-align: middle;
+}
+
+/* Tasks section */
+.luciana-section-title {
+  font-family: var(--font-heading); font-size: 2.4rem;
+  font-weight: 500;
+  margin-bottom: 2.5rem; padding-bottom: 1.2rem;
+  border-bottom: 1.5px solid rgba(107, 16, 36, 0.08);
+}
+
+/* Task cards */
+.luciana-task-card {
+  background: white; padding: 1.8rem 2.4rem; border-radius: 2rem;
+  box-shadow: var(--shadow-card);
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  animation: fadeInTask 0.5s ease-out forwards; opacity: 0;
+  border: 1px solid rgba(0,0,0,0.01);
+}
+.luciana-task-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 12px 30px rgba(107, 16, 36, 0.08);
+  border-bottom: 3px solid var(--color-bordo);
+}
+
+/* Status badges */
+.luciana-badge {
+  padding: 0.4rem 1rem; border-radius: 0.6rem;
+  font-family: var(--font-body); font-size: 1rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.luciana-badge--pending { background: rgba(107, 16, 36, 0.08); color: var(--color-bordo); }
+.luciana-badge--submitted { background: #f0f4e8; color: #6b7a4d; }
+.luciana-badge--reviewed { background: var(--color-parchment); color: #5B4E3E; opacity: 0.6; }
+
+/* Progress ring */
+.luciana-progress-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3rem; padding-top: 2rem;
+}
+.luciana-ring { position: relative; width: 22rem; height: 22rem; }
+.luciana-ring svg { transform: rotate(-90deg); filter: drop-shadow(0 10px 25px rgba(107, 16, 36, 0.12)); }
+.luciana-ring__label {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+}
+.luciana-ring__value {
+  font-family: var(--font-heading); font-size: 4rem;
+  color: var(--color-ink); line-height: 1; font-weight: 700;
+}
+.luciana-ring__unit {
+  font-family: var(--font-ui); font-size: 1rem; font-weight: 950;
+  opacity: 0.3; letter-spacing: 0.15em; text-transform: uppercase;
+  margin-top: 0.4rem;
+}
+
+/* Quote */
+.luciana-quote {
+  background: var(--color-parchment); padding: 2.5rem;
+  border-radius: 2rem; width: 100%;
+  border-left: 5px solid var(--color-bordo);
+  box-shadow: 6px 6px 24px rgba(0,0,0,0.02);
+}
+.luciana-quote p {
+  font-family: var(--font-handwritten); font-size: 1.8rem;
+  color: var(--color-bordo); line-height: 1.35; margin: 0;
+  font-style: italic;
+}
+
+/* Lucky 4 decorative */
+.luciana-four-deco {
+  position: absolute; bottom: -2rem; right: -1rem; z-index: 0;
+  font-family: var(--font-titles); font-size: 18rem;
+  color: rgba(107, 16, 36, 0.03); font-weight: 700;
+  line-height: 1; pointer-events: none; user-select: none;
+}
+
+/* Tabs */
+.luciana-tabs {
+  display: flex; gap: 3rem; margin-bottom: 4rem;
+  border-bottom: 1.5px solid rgba(0,0,0,0.03);
+}
+.luciana-tab {
+  background: none; border: none; padding: 1.2rem 1.5rem;
+  font-family: var(--font-body); font-size: 1.1rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--color-ink); opacity: 0.25; cursor: pointer;
+  transition: all 0.3s; position: relative;
+}
+.luciana-tab:hover { opacity: 0.5; }
+.luciana-tab.active { opacity: 1; color: var(--color-bordo); }
+.luciana-tab.active::after {
+  content: ''; position: absolute; bottom: -1.5px; left: 0; width: 100%; height: 2.5px;
+  background: var(--color-bordo); border-radius: 4px;
+}
