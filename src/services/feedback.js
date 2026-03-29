@@ -30,7 +30,8 @@ export const addFeedback = async ({ submissionId, comment }) => {
         if (error) throw error;
         
         // C. Update submission status to 'reviewed'
-        await supabase.from('submissions').update({ status: 'reviewed' }).eq('id', submissionId);
+        const { error: updateError } = await supabase.from('submissions').update({ status: 'reviewed' }).eq('id', submissionId);
+        if (updateError) console.warn("Could not update submission status, but feedback was saved:", updateError);
 
         // D. Generate Notification for Luciana (Student)
         // Find recipient from submission record

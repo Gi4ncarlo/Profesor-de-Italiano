@@ -3,6 +3,23 @@ import { toast } from './Toast';
 import { getDraft, saveDraft } from '../services/submissions';
 
 
+
+const TASK_DESCRIPTIONS = {
+    'fill': 'Leggi attentamente il testo e inserisci la parola corretta negli spazi vuoti per completare il senso della frase.',
+    'completare': 'Leggi attentamente il testo e inserisci la parola corretta negli spazi vuoti per completare il senso della frase.',
+    'roleplay': 'Immergiti nella situazione descritta e rispondi in modo naturale, come se stessi parlando con Giancarlo.',
+    'conversazione': 'Immergiti nella situazione descritta e rispondi in modo naturale, come se stessi parlando con Giancarlo.',
+    'flashcard': 'Ripassa il nuovo vocabolario. Gira le carte per vede la traduzzione',
+    'flashcards': 'Ripassa il nuovo vocabolario. Gira le carte per ved la traduzzione.',
+    'lessico': 'Ripassa il nuovo vocabolario. Gira le carte per vedere la traduzzione.',
+    'order_sentence': 'Clicca sulle parole nell\'ordine corretto per formare una frase di senso compiuto.',
+    'translation_choice': 'Scegli la traduzione più accurata tra le opzioni proposte per la frase presentata.',
+    'error_correction': 'Individua l\'errore nella frase e scrivi la versione corretta. Fai molta attenzione ai dettagli!',
+    'dictation': 'Ascolta l\'audio e trascrivi quello che senti. Puoi riascoltare il frammento tutte le volte che vuoi.',
+    'memory': 'Abbina le parole italiane con le loro traduzioni corrispondenti. Trova tutte le coppie!',
+    'speed': 'Traduci più parole possibili prima che scada il tempo. Sii veloce e preciso!'
+};
+
 export const TaskModal = (onComplete) => {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay animate-in';
@@ -74,12 +91,29 @@ export const TaskModal = (onComplete) => {
         `;
     };
 
+    const renderInstruction = (task) => {
+        const type = task.type?.toLowerCase();
+        const description = TASK_DESCRIPTIONS[type] || 'Segui le istruzioni del maestro per completare questa attività.';
+        
+        return `
+            <div style="margin-bottom: 5rem; background: #fffcf8; border-radius: 2.2rem; padding: 2.5rem 3.5rem; border: 1.5px dashed rgba(166, 77, 50, 0.15); display: flex; align-items: center; gap: 2rem; animation: fadeIn 0.8s ease-out;">
+                <div style="font-size: 2.8rem; filter: grayscale(0.2); opacity: 0.8;">💡</div>
+                <div style="flex: 1;">
+                    <div style="font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 0.5rem; opacity: 0.7;">Istruzioni d'Uso</div>
+                    <div style="font-family: var(--font-body); font-size: 1.55rem; color: var(--color-ink); opacity: 0.85; line-height: 1.4; font-style: italic;">
+                        ${description}
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
     const renderFillContent = (task) => {
         const c = task.content || {};
         const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
         const answerColor = isReadOnly ? '#0057b7' : 'var(--color-bordo)';
         
-        // Handle new items-based fill (from Tatoeba/Creation Panel)
+        // Handle items-based fill (Alternative Tatoeba structure)
         if (c.items && Array.isArray(c.items)) {
             let answers = [];
             try { 
@@ -95,7 +129,7 @@ export const TaskModal = (onComplete) => {
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 3.5rem;">
                         ${c.items.map((it, idx) => {
-                            const segments = it.italiano.split('___');
+                            const segments = (it.italiano || "").split(/_{2,}|-{2,}|\.{3,}/);
                             return `
                                 <div style="background: white; border-radius: 2.5rem; padding: 4rem 5rem; box-shadow: 0 12px 40px rgba(0,0,0,0.02); border: 1.5px solid rgba(0,0,0,0.015);">
                                     <div style="font-family: var(--font-body); font-size: 2.4rem; line-height: 2; color: var(--color-ink);">
@@ -113,10 +147,57 @@ export const TaskModal = (onComplete) => {
                 </div>
             `;
         }
+        
+        // Handle sentences-based fill (from Creation Panel with multiple individual sentences)
+        if (c.sentences && Array.isArray(c.sentences)) {
+            let answers = [];
+            try { 
+                const source = task.student_answer || task.answers;
+                answers = (typeof source === 'string' ? JSON.parse(source) : (source?.data || source)) || [];
+            } catch(e) { console.error(e); }
+
+            return `
+                <div style="margin-bottom: 4.5rem;">
+                    <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                        <span>RIEMPI GLI SPAZI</span>
+                        <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 2.5rem;">
+                        ${c.sentences.map((it, idx) => {
+                            // GiancarloDashboard saves the actual original text and the 'blank' word.
+                            // We need to replace that word in the text with an input.
+                            const originalText = it.text || "";
+                            const blank = it.blank || "";
+                            
+                            let sentenceHtml = originalText;
+                            if (blank) {
+                                const reg = new RegExp(`\\b${blank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                                const match = originalText.match(reg);
+                                if (match) {
+                                    const inputHtml = `<input type="text" class="task-input" data-idx="${idx}" style="width: 20rem; font-size: 2.2rem; color: ${answerColor}; font-weight: 700; border: none; border-bottom: 2.5px solid ${isReadOnly ? '#e6eef8' : 'rgba(166, 77, 50, 0.4)'}; background: transparent; margin: 0 1rem; border-radius: 0.6rem; padding: 0.2rem 1rem; transition: all 0.3s;" placeholder="..." value="${answers[idx] || ''}" ${isReadOnly ? 'readonly' : ''}>`;
+                                    sentenceHtml = originalText.replace(reg, inputHtml);
+                                } else {
+                                    // Fallback if regex fails (e.g. word not found due to punctuation)
+                                    sentenceHtml = originalText.replace(blank, `<input type="text" class="task-input" data-idx="${idx}" style="width: 20rem; font-size: 2.2rem; color: ${answerColor}; font-weight: 700; border: none; border-bottom: 2.5px solid ${isReadOnly ? '#e6eef8' : 'rgba(166, 77, 50, 0.4)'}; background: transparent; margin: 0 1rem; border-radius: 0.6rem; padding: 0.2rem 1rem; transition: all 0.3s;" placeholder="..." value="${answers[idx] || ''}" ${isReadOnly ? 'readonly' : ''}>`);
+                                }
+                            }
+
+                            return `
+                                <div style="background: white; border-radius: 2.2rem; padding: 3.5rem 4.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.02); border: 1.5px solid rgba(0,0,0,0.012);">
+                                    <div style="font-family: var(--font-body); font-size: 2.2rem; line-height: 1.8; color: var(--color-ink);">
+                                        ${sentenceHtml}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         // Legacy string-based fill
         const contentStr = getRawContent(task);
-        const segments = contentStr.split(/___|----/);
+        const segments = contentStr.split(/_{2,}|-{2,}|\.{3,}/);
         let answers = [];
         try { 
             const source = task.student_answer || task.answers;
@@ -202,7 +283,7 @@ export const TaskModal = (onComplete) => {
         const content = task.content || {};
         const text = content.text || "";
         const gaps = content.gaps || [];
-        const segments = text.split(/___/);
+        const segments = text.split(/_{2,}|-{2,}|\.{3,}/);
         
         let savedAnswers = [];
         try {
@@ -218,8 +299,8 @@ export const TaskModal = (onComplete) => {
                     <span>SCELTA MULTIPLA</span>
                     <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
-                <div style="background: white; border-radius: 3.5rem; padding: 6.5rem 7.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
-                    <div style="font-family: var(--font-body); font-size: 2.8rem; line-height: 2.2; color: var(--color-ink);">
+                <div style="background: white; border-radius: 3.5rem; padding: 6.5rem 7.5rem 9.5rem 7.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
+                    <div style="font-family: var(--font-body); font-size: 3rem; line-height: 5.5; color: var(--color-ink); text-align: center;">
                         ${segments.map((s, i) => {
                             if (i >= segments.length - 1) return s;
                             const gap = gaps[i] || { options: [], correct: '' };
@@ -229,19 +310,21 @@ export const TaskModal = (onComplete) => {
                             
                             let btnStyle = `
                                 display: inline-flex; align-items: center; justify-content: center;
-                                min-width: 18rem; padding: 0.2rem 1.8rem; margin: 0 1rem;
-                                border-radius: 1.2rem; cursor: ${isReadOnly ? 'default' : 'pointer'};
+                                min-width: 24rem; padding: 1rem 2.2rem; margin: 0 1.2rem;
+                                border-radius: 1.8rem; cursor: ${isReadOnly ? 'default' : 'pointer'};
                                 transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                                font-family: var(--font-body); font-size: 2.4rem; font-weight: 700;
+                                font-family: var(--font-body); font-size: 2.6rem; font-weight: 700;
                                 border: 2.5px solid rgba(0,0,0,0.08); background: #fdfdfd;
                                 color: var(--color-ink); vertical-align: middle; position: relative;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.01);
+                                line-height: 1.4;
                             `;
 
                             if (showResult) {
                                 if (isCorrect) {
-                                    btnStyle += 'border-color: #10b981; background: #ecfdf5; color: #065f46;';
+                                    btnStyle += 'border-color: #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.08);';
                                 } else {
-                                    btnStyle += 'border-color: #ef4444; background: #fef2f2; color: #991b1b;';
+                                    btnStyle += 'border-color: #ef4444; background: #fef2f2; color: #991b1b; box-shadow: 0 8px 25px rgba(239, 68, 68, 0.08);';
                                 }
                             } else if (studentVal) {
                                 btnStyle += 'border-color: var(--color-bordo); background: rgba(107, 16, 36, 0.03); color: var(--color-bordo);';
@@ -253,21 +336,33 @@ export const TaskModal = (onComplete) => {
                                     <span class="choice-label">${studentVal || '...'}</span>
                                     ${!isReadOnly ? `
                                         <div class="choice-dropdown" style="
-                                            display: none; position: absolute; top: calc(100% + 1rem); left: 0; 
-                                            background: white; border-radius: 1.8rem; box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-                                            z-index: 100; min-width: 22rem; padding: 1rem; border: 1px solid rgba(0,0,0,0.05);
+                                            display: none; position: absolute; top: calc(100% + 1.2rem); left: 50%; transform: translateX(-50%);
+                                            background: white; border-radius: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.18);
+                                            z-index: 100; min-width: 26rem; padding: 1.2rem; border: 1.2px solid rgba(0,0,0,0.05);
                                             overflow: hidden;
                                         ">
                                             ${gap.options.map(opt => `
                                                 <div class="choice-option" data-val="${opt}" style="
-                                                    padding: 1.2rem 2rem; border-radius: 1.2rem; transition: 0.2s;
-                                                    font-size: 1.8rem; cursor: pointer; color: var(--color-ink);
-                                                    ${opt === studentVal ? 'background: rgba(107, 16, 36, 0.05); font-weight: 700;' : ''}
+                                                    padding: 1.4rem 2.2rem; border-radius: 1.4rem; transition: 0.2s;
+                                                    font-size: 2rem; cursor: pointer; color: var(--color-ink);
+                                                    ${opt === studentVal ? 'background: rgba(107, 16, 36, 0.06); font-weight: 700; color: var(--color-bordo);' : ''}
                                                 ">${opt}</div>
                                             `).join('')}
                                         </div>
                                     ` : ''}
-                                    ${showResult && !isCorrect ? `<div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 1rem; color: #10b981; font-weight: 950; white-space: nowrap; margin-top: 0.5rem;">Vero: ${gap.correct}</div>` : ''}
+                                    ${showResult && !isCorrect ? `
+                                        <div style="
+                                            position: absolute; top: calc(100% + 1rem); left: -2.5px; right: -2.5px;
+                                            background: #f0fdf4; border: 2.5px solid #10b981; padding: 0.8rem 1rem; border-radius: 1.8rem;
+                                            box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15); z-index: 10;
+                                            display: flex; flex-direction: column; align-items: center; justify-content: center;
+                                            line-height: 1.2;
+                                        ">
+                                            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; background: #f0fdf4; border-left: 2.5px solid #10b981; border-top: 2.5px solid #10b981; rotate: 45deg;"></div>
+                                            <span style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.8; margin-bottom: 0.2rem;">Corretta</span>
+                                            <span style="font-family: var(--font-body); font-size: 2.2rem; color: #064e3b; font-weight: 800; letter-spacing: -0.02em;">${gap.correct}</span>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `;
                         }).join('')}
@@ -297,25 +392,40 @@ export const TaskModal = (onComplete) => {
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 4rem;">
-                    ${pairs.map((p, idx) => `
+                    ${pairs.map((p, idx) => {
+                        const original = p.italiano || p.it || "";
+                        const student = answers[idx] || "";
+                        const correction = p.español || p.es || "";
+                        
+                        return `
                         <div style="background: white; border-radius: 3rem; padding: 5rem 6.5rem; box-shadow: 0 15px 45px rgba(0,0,0,0.02); border: 1.5px solid rgba(0,0,0,0.01);">
                             <div style="display: flex; gap: 3rem; align-items: start;">
                                 <div style="flex: 1;">
-                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.8rem; opacity: 0.75;">Originale</div>
-                                    <p style="font-family: var(--font-body); font-size: 2.22rem; line-height: 1.5; color: var(--color-ink); font-weight: 700;">${p.italiano || p.it}</p>
+                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 2rem; opacity: 0.75;">Originale</div>
+                                    <p style="font-family: var(--font-body); font-size: 2.22rem; line-height: 1.5; color: var(--color-ink); font-weight: 700;">"${original}"</p>
                                 </div>
                                 <div style="width: 5.5rem; height: 5.5rem; border-radius: 50%; background: #fffcfb; border: 1.5px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; font-size: 2.4rem; color: var(--color-terracota); margin-top: 2rem;">→</div>
                                 <div style="flex: 1.2;">
-                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.8rem; opacity: 0.75;">Tua Traduzione</div>
+                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 2rem; opacity: 0.75;">Tua Traduzione</div>
                                     <textarea class="task-input task-textarea-small" data-idx="${idx}" placeholder="Digita qui..." style="
                                         width: 100%; border: none; background: ${isReadOnly ? '#f8fbfc' : 'rgba(0,0,0,0.02)'}; 
-                                        font-family: var(--font-handwritten); font-size: 2.4rem; color: ${isReadOnly ? '#0057b7' : 'var(--color-ink)'};
-                                        padding: 1.5rem 2rem; border-radius: 1.5rem; min-height: 8rem; resize: none; outline: none; transition: all 0.3s;
-                                    " ${isReadOnly ? 'readonly' : ''}>${answers[idx] || ''}</textarea>
+                                        font-family: var(--font-handwritten); font-size: 2.4rem; color: ${isReadOnly ? '#1d4ed8' : 'var(--color-ink)'};
+                                        padding: 1.5rem 2rem; border-radius: 1.5rem; min-height: 10rem; resize: none; outline: none; transition: all 0.3s;
+                                    " ${isReadOnly ? 'readonly' : ''}>${student}</textarea>
+                                    
+                                    ${isReadOnly && correction ? `
+                                        <div style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1.5px dashed rgba(0,0,0,0.08);">
+                                            <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 1.2rem; opacity: 0.7;">Versione Corretta ✨</div>
+                                            <div style="font-family: var(--font-body); font-size: 1.6rem; color: #065f46; line-height: 1.4; font-style: italic;">
+                                                "${correction}"
+                                            </div>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
@@ -685,6 +795,11 @@ export const TaskModal = (onComplete) => {
         }
 
         modal.innerHTML = renderHeader(task);
+        
+        // --- Instructions Block ---
+        if (task.status === 'pending' || task.status === 'draft') {
+            modal.innerHTML += renderInstruction(task);
+        }
 
         modal.innerHTML += renderFeedback(task);
 
@@ -1097,19 +1212,32 @@ export const TaskModal = (onComplete) => {
                 document.body.appendChild(flare);
                 setTimeout(() => flare.remove(), 1000);
 
-                // 2. High Octane Confetti
+                // 2. High Octane Confetti (Icons + Colors)
                 const colors = ['#C4603A', '#6B1024', '#7A8B5A', '#C49A3C', '#EADCBE', '#1C0F07'];
-                for (let i = 0; i < 100; i++) { // Increased particle count
-                    const p = document.createElement('div');
-                    p.className = 'confetti-particle';
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    const size = Math.random() * 15 + 5;
-                    // Explosion radius
-                    const dx = (Math.random() - 0.5) * 1200;
-                    const dy = (Math.random() - 0.5) * 1200 - 300;
-                    const rot = Math.random() * 1080;
+                const particleCount = 100;
+
+                for (let i = 0; i < particleCount; i++) {
+                    const isIcon = Math.random() > 0.55; // 45% icons
+                    const p = document.createElement(isIcon ? 'img' : 'div');
                     
-                    p.style.backgroundColor = color;
+                    if (isIcon) {
+                        p.src = '/favicon.png';
+                        p.style.objectFit = 'contain';
+                    } else {
+                        const color = colors[Math.floor(Math.random() * colors.length)];
+                        p.style.backgroundColor = color;
+                        p.style.borderRadius = '2px';
+                    }
+
+                    p.className = 'confetti-particle';
+                    const size = isIcon ? (Math.random() * 35 + 35) : (Math.random() * 15 + 8);
+                    
+                    // High-velocity explosion
+                    const dx = (Math.random() - 0.5) * 1600;
+                    const dy = (Math.random() - 0.7) * 1200; // Stronger upward force
+                    const rot = Math.random() * 1080;
+                    const delay = Math.random() * 0.15;
+                    
                     p.style.width = `${size}px`;
                     p.style.height = `${size}px`;
                     p.style.left = `${centerX}px`;
@@ -1117,13 +1245,14 @@ export const TaskModal = (onComplete) => {
                     p.style.setProperty('--dx', `${dx}px`);
                     p.style.setProperty('--dy', `${dy}px`);
                     p.style.setProperty('--rot', `${rot}deg`);
+                    p.style.animationDelay = `${delay}s`;
                     
                     document.body.appendChild(p);
-                    setTimeout(() => p.remove(), 2500);
+                    setTimeout(() => p.remove(), 4500);
                 }
                 
                 btnSubmit.classList.add('celebrating');
-                btnSubmit.innerHTML = '<span>BRAVISSIMA! ✨</span>';
+                btnSubmit.innerHTML = '<span>ECCELSO! ✨</span>';
             };
 
             btnSubmit.onclick = async () => {

@@ -130,7 +130,8 @@ export const getStudentTasks = async () => {
             if (subs.length > 0) {
                 // Get latest sub
                 const latest = subs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
-                status = latest.status || (latest.feedback && latest.feedback.length > 0 ? 'reviewed' : 'submitted');
+                const hasFeedback = latest.feedback && latest.feedback.length > 0;
+                status = (latest.status === 'reviewed' || hasFeedback) ? 'reviewed' : latest.status;
                 feedback = latest.feedback;
                 answers = latest.answers;
             }

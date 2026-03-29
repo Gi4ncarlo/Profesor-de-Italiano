@@ -118,7 +118,7 @@ export const getSubmissionsByTask = async (taskId) => {
             const subs = assignment.submissions || [];
             
             if (subs.length === 0) {
-                // If it's just an assignment with NO submission
+                // Case 1: No submissions yet (Assignment is purely pending)
                 results.push({
                     id: `pending-${assignment.id}`,
                     assignment_id: assignment.id,
@@ -129,15 +129,24 @@ export const getSubmissionsByTask = async (taskId) => {
                     answers: null
                 });
             } else {
-                // Flatten submissions
-                subs.forEach(sub => {
-                    results.push({
-                        ...sub,
-                        student: assignment.student,
-                        profiles: assignment.student,
-                        assignment_id: assignment.id,
-                        content: sub.answers
-                    });
+                // Case 2: One or more submissions (drafts, submitted, reviewed)
+                // We pick only the MOST relevant one to avoid duplication in UI
+                // Priority: reviewed > submitted > draft
+                const sortedSubs = [...subs].sort((a,b) => {
+                    const statusOrder = { 'reviewed': 3, 'submitted': 2, 'draft': 1 };
+                    const diff = (statusOrder[b.status] || 0) - (statusOrder[a.status] || 0);
+                    if (diff !== 0) return diff;
+                    // If same status, take the newest one
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                const bestSub = sortedSubs[0];
+                results.push({
+                    ...bestSub,
+                    student: assignment.student,
+                    profiles: assignment.student,
+                    assignment_id: assignment.id,
+                    content: bestSub.answers
                 });
             }
         });
@@ -186,17 +195,26 @@ export const getStudentCorrections = async (studentId) => {
                     feedback (*)
                 )
             `)
-            .eq('student_id', studentId)
-            .eq('submissions.status', 'reviewed');
+            .eq('student_id', studentId);
+            // We fetch all submissions with their feedback and filter in memory for those that are truly 'reviewed'
+            // either by the status field or by existence of feedback record.
 
         if (error) throw error;
         
         // Flatten into a clean list of corrections
-        const result = data.map(item => ({
-            ...item.submissions[0],
-            task: item.tasks,
-            assignment_id: item.id
-        }));
+        const result = [];
+        data.forEach(item => {
+            const reviewedSubs = item.submissions.filter(s => s.status === 'reviewed' || (s.feedback && s.feedback.length > 0));
+            if (reviewedSubs.length > 0) {
+                // Get latest reviewed sub
+                const sub = reviewedSubs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                result.push({
+                    ...sub,
+                    task: item.tasks,
+                    assignment_id: item.id
+                });
+            }
+        });
 
         // Sort by feedback date descending
         result.sort((a,b) => {

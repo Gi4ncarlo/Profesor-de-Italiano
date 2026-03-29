@@ -102,7 +102,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
             // --- AUTO-REVIEW LOGIC for Auto-correct Tasks ---
             const type = task.type?.toLowerCase();
-            const isAutoCorrect = ['flashcard', 'flashcards', 'lessico', 'order_sentence', 'translation_choice', 'error_correction', 'speed'].includes(type);
+            const isAutoCorrect = ['fill', 'completare', 'flashcard', 'flashcards', 'lessico', 'order_sentence', 'translation_choice', 'error_correction', 'speed'].includes(type);
             
             if (isAutoCorrect && submissions.length > 0) {
                 const pendingSub = submissions.find(s => s.status === 'submitted');
@@ -183,13 +183,13 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 2. MULTI-ITEM TRANSLATION (Tatoeba-style)
-        if (type === 'translation' || type === 'traduzione' || task.content?.pairs || task.content?.items) {
+        if (type === 'translation' || type === 'traduzione' || (task.content?.items && !task.content?.question)) {
             const items = task.content?.pairs || task.content?.items || [];
             // Robust answer extraction
             let studentAnswers = [];
             try {
                 const raw = sub.answers || sub.content;
-                studentAnswers = typeof raw === 'string' ? JSON.parse(raw) : (raw?.data || raw || []);
+                studentAnswers = (typeof raw === 'string' ? JSON.parse(raw) : (raw?.data || raw)) || [];
                 if (!Array.isArray(studentAnswers)) studentAnswers = [studentAnswers];
             } catch(e) {
                 studentAnswers = [];
@@ -197,19 +197,33 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
             return items.map((item, idx) => {
                 const originalText = item.it || item.italiano || item.text || "Senza testo";
+                const correctVersion = item.es || item.español || "";
                 const studentTranslation = studentAnswers[idx] || "";
                 
                 return `
-                    <div style="margin-bottom: 2.5rem; padding: 2.5rem; background: #fffcf8; border-radius: 20px; border: 1.5px solid rgba(0,0,0,0.03);">
-                        <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">FRASE ORIGINALE (ITALIANO)</div>
-                        <div style="font-family: var(--font-heading); font-size: 2rem; color: var(--color-ink); margin-bottom: 2rem; padding-left: 1.5rem; border-left: 3.5px solid var(--color-terracota);">
+                    <div style="margin-bottom: 3.5rem; padding: 3rem; background: #fffdfa; border-radius: 24px; border: 1.5px solid rgba(0,0,0,0.03); box-shadow: 0 4px 20px rgba(0,0,0,0.01);">
+                        <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.6;">CONSEGNA / FRASE ORIGINALE</div>
+                        <div style="font-family: var(--font-heading); font-size: 2.2rem; color: var(--color-ink); margin-bottom: 2.5rem; padding-left: 2rem; border-left: 4px solid var(--color-terracota);">
                             "${originalText}"
                         </div>
                         
-                        <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">TRADUZIONE DI LUCI</div>
-                        <div style="padding: 2.5rem; background: white; border: 2.5px solid ${studentTranslation ? 'rgba(0,0,0,0.05)' : '#dc2626'}; border-radius: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
-                            <div class="font-editorial" style="font-size: 2.35rem; color: var(--color-ink); line-height: 1.2;">
-                                ${studentTranslation ? `"${studentTranslation}"` : '<span style="opacity:0.3; font-style: italic;">Nessuna risposta nel capitolo...</span>'}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-top: 1rem;">
+                            <div>
+                                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">RISPOSTA DI LUCI</div>
+                                <div style="padding: 2.5rem; background: white; border: 2.5px solid ${studentTranslation ? 'rgba(0,0,0,0.05)' : '#991b1b'}; border-radius: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
+                                    <div style="font-family: var(--font-handwritten); font-size: 2.22rem; color: #1d4ed8; line-height: 1.2;">
+                                        ${studentTranslation ? `"${studentTranslation}"` : '<span style="opacity:0.3; font-style: italic;">Nessuna risposta...</span>'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">VERSIONE CORRETTA</div>
+                                <div style="padding: 2.5rem; background: #f0fdf4; border: 1.5px solid rgba(5, 150, 105, 0.1); border-radius: 1.5rem;">
+                                    <div style="font-family: var(--font-body); font-size: 1.8rem; color: #065f46; line-height: 1.3;">
+                                        "${correctVersion || 'Senza riferimento'}"
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -246,14 +260,52 @@ export const TaskDetailsPage = (navigate, user, params) => {
             return h;
         }
 
-        // 3. COMPLETAR / FILL CHOICE
-        if (type?.includes('fill') || type?.includes('completare') || (task.content?.text && task.content.text.includes('___'))) {
-            const segments = (task.content?.text || "").split(/___|----/);
-            let h = `<div style="line-height: 2.8; display: flex; flex-wrap: wrap; align-items: baseline;">`;
+        // 3. COMPLETAR / FILL CHOICE (SCELTA MULTIPLA)
+        if (type === 'fill' || type === 'completare' || (task.content?.text && (task.content.text.includes('___') || task.content.text.includes('---')))) {
+            const segments = (task.content?.text || "").split(/_{2,}|-{2,}|\.{3,}/);
+            const gaps = task.content?.gaps || [];
+            let h = `<div style="line-height: 5.5; text-align: center; font-family: var(--font-body); font-size: 2.6rem; color: var(--color-ink); padding: 4rem 3rem 8rem 3rem; background: #fffdf9; border-radius: 2.5rem; border: 1.5px solid rgba(0,0,0,0.03);">`;
             segments.forEach((p, i) => {
-                h += ` <span class="task-fragment">${p}</span> `;
+                h += `<span>${p}</span>`;
                 if (i < segments.length - 1) {
-                    h += ` <span class="student-val">${Array.isArray(answers) ? (answers[i] || '...') : '...'}</span> `;
+                    const studentVal = Array.isArray(answers) ? (answers[i] || '...') : '...';
+                    
+                    let gapCorrect = '';
+                    if (gaps[i]) {
+                        gapCorrect = typeof gaps[i] === 'object' ? (gaps[i].correct || '') : gaps[i];
+                    }
+                    const correctVal = (gapCorrect || (task.content.answers ? task.content.answers[i] : null) || '').trim();
+                    
+                    const clean = (s) => (s || "").toLowerCase().replace(/[.,!?;:]/g, '').trim();
+                    const isCorrect = correctVal && clean(studentVal) === clean(correctVal);
+                    
+                    h += `
+                        <span style="display: inline-block; position: relative; margin: 0 1rem; vertical-align: middle;">
+                            <span style="
+                                display: flex; align-items: center; justify-content: center;
+                                min-width: 20rem; padding: 0.8rem 1.8rem; border-radius: 1.5rem;
+                                color: ${isCorrect ? '#065f46' : '#991b1b'};
+                                background: ${isCorrect ? '#ecfdf5' : '#fef2f2'};
+                                border: 2.5px solid ${isCorrect ? '#10b981' : '#ef4444'};
+                                box-shadow: 0 4px 12px ${isCorrect ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'};
+                                font-weight: 700; font-family: var(--font-body); font-size: 2.4rem;
+                                line-height: 1.2;
+                            ">${studentVal}</span>
+                            ${!isCorrect && correctVal ? `
+                                <div style="
+                                    position: absolute; top: calc(100% + 0.8rem); left: -2.5px; right: -2.5px;
+                                    background: #f0fdf4; border: 2.5px solid #10b981; padding: 0.6rem 0.8rem; border-radius: 1.5rem;
+                                    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); z-index: 5;
+                                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                                    line-height: 1.2;
+                                ">
+                                    <div style="position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; background: #f0fdf4; border-left: 2.5px solid #10b981; border-top: 2.5px solid #10b981; rotate: 45deg;"></div>
+                                    <span style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.8; margin-bottom: 0.2rem;">Corretta</span>
+                                    <span style="font-family: var(--font-body); font-size: 2rem; color: #064e3b; font-weight: 800; letter-spacing: -0.02em;">${correctVal}</span>
+                                </div>
+                            ` : ''}
+                        </span>
+                    `;
                 }
             });
             h += `</div>`;
