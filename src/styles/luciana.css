@@ -6,7 +6,7 @@
   box-shadow: var(--shadow-premium);
   border: 1px solid rgba(0,0,0,0.02);
   min-height: calc(100vh - 5rem);
-  max-width: 145rem;
+  max-width: 155rem;
   width: 100%;
   position: relative; overflow: hidden;
 }
@@ -19,7 +19,7 @@
 
 /* Header */
 .luciana-date {
-  font-family: var(--font-body); font-size: 1.2rem; font-weight: 600;
+  font-family: var(--font-body); font-size: 1.4rem; font-weight: 800;
   color: var(--color-bordo); margin-bottom: 1.5rem; display: block;
 }
 .luciana-header h1 {
@@ -28,8 +28,9 @@
   line-height: 1;
 }
 .luciana-header p {
-  font-family: var(--font-body); font-size: 1.05rem; font-weight: 800;
-  opacity: 0.3; text-transform: uppercase; letter-spacing: 0.25em;
+  font-family: var(--font-body); font-size: 1.35rem; font-weight: 900;
+  opacity: 0.85; text-transform: uppercase; letter-spacing: 0.25em;
+  color: var(--color-ink);
 }
 
 /* Lucky number 4 badge */
@@ -69,9 +70,9 @@
 
 /* Status badges */
 .luciana-badge {
-  padding: 0.4rem 1rem; border-radius: 0.6rem;
-  font-family: var(--font-body); font-size: 1rem; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.4rem 1.2rem; border-radius: 0.7rem;
+  font-family: var(--font-body); font-size: 1.15rem; font-weight: 900;
+  letter-spacing: 0.1em; text-transform: uppercase;
 }
 .luciana-badge--pending { 
     background: #fffbeb; 
@@ -106,9 +107,9 @@
   color: var(--color-ink); line-height: 1; font-weight: 700;
 }
 .luciana-ring__unit {
-  font-family: var(--font-ui); font-size: 1rem; font-weight: 950;
-  opacity: 0.3; letter-spacing: 0.15em; text-transform: uppercase;
-  margin-top: 0.4rem;
+  font-family: var(--font-ui); font-size: 1.25rem; font-weight: 950;
+  opacity: 0.85; letter-spacing: 0.15em; text-transform: uppercase;
+  margin-top: 0.5rem;
 }
 
 /* Quote */
@@ -139,9 +140,9 @@
 }
 .luciana-tab {
   background: none; border: none; padding: 1.2rem 1.5rem;
-  font-family: var(--font-body); font-size: 1.1rem; font-weight: 600;
+  font-family: var(--font-body); font-size: 1.45rem; font-weight: 950;
   text-transform: uppercase; letter-spacing: 0.15em;
-  color: var(--color-ink); opacity: 0.25; cursor: pointer;
+  color: var(--color-ink); opacity: 0.8; cursor: pointer;
   transition: all 0.3s; position: relative;
 }
 .luciana-tab:hover { opacity: 0.5; }

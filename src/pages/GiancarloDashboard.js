@@ -395,13 +395,13 @@ export const GiancarloDashboard = (navigate, user) => {
                         <div style="position: relative; margin-top: 0.5rem;">
                             <div class="notification-bell-container" id="notif-bell" style="background: white; border-radius: 50%; width: 4.2rem; height: 4.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer;">
                                 <svg style="width: 2rem; height: 2rem; fill: var(--color-ink); opacity: 0.7;" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                                <div class="notification-badge" id="notif-count" style="display:none; position: absolute; top: -0.2rem; right: -0.2rem; background: var(--color-terracota); color: white; min-width: 1.8rem; height: 1.8rem; padding: 0 0.5rem; border-radius: 50%; font-size: 0.75rem; align-items: center; justify-content: center; border: 2px solid white; font-weight: 900;">0</div>
+                                <div class="notification-badge" id="notif-count" style="display:none; position: absolute; top: -0.2rem; right: -0.2rem; background: var(--color-terracota); color: white; min-width: 1.8rem; height: 1.8rem; padding: 0 0.5rem; border-radius: 50%; font-size: 0.95rem; align-items: center; justify-content: center; border: 2px solid white; font-weight: 950;">0</div>
                             </div>
                             
                             <div class="notification-dropdown" id="notif-dropdown" style="top: 120%; right: 0;">
                                 <div class="notification-header">
                                     <span>Notifiche</span>
-                                    <span id="clear-all" style="cursor:pointer; text-decoration: underline; font-size: 0.7rem; opacity: 0.6;">Svuota tutto</span>
+                                    <span id="clear-all" style="cursor:pointer; text-decoration: underline; font-size: 0.95rem; opacity: 0.8; font-weight: 800;">Svuota tutto</span>
                                 </div>
                                 <div class="notification-list" id="notifications-list"></div>
                             </div>
@@ -434,7 +434,7 @@ export const GiancarloDashboard = (navigate, user) => {
                                 ${students.map(s => `<option value="${s.id}" ${s.id === selectedStudentId ? 'selected' : ''}>${s.name}</option>`).join('')}
                             </select>
                         </div>` : `
-                        <div style="margin-top: 2rem; font-family: var(--font-body); font-size: 1.1rem; opacity: 0.45;">
+                        <div style="margin-top: 2.5rem; font-family: var(--font-body); font-size: 1.3rem; opacity: 0.8; color: var(--color-ink);">
                             👤 Assegnato a: <strong>${studentName}</strong>
                         </div>`}
 
@@ -662,8 +662,8 @@ export const GiancarloDashboard = (navigate, user) => {
                 dateHeader.className = 'task-list-date-group';
                 dateHeader.style = 'margin: 4rem 0 2rem; display: flex; align-items: center; gap: 1.5rem;';
                 dateHeader.innerHTML = `
-                    <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; white-space: nowrap; opacity: 0.8;">${dateLabel}</span>
-                    <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(166, 77, 50, 0.15), transparent);"></div>
+                    <span style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; white-space: nowrap; opacity: 1;">${dateLabel}</span>
+                    <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(166, 77, 50, 0.25), transparent);"></div>
                 `;
                 taskListDiv.appendChild(dateHeader);
 
@@ -680,17 +680,17 @@ export const GiancarloDashboard = (navigate, user) => {
                         <div style="flex:1; display:flex; align-items:center; gap:2.5rem;">
                             ${showDot ? '<div class="notif-dot"></div>' : '<div style="width:0.9rem;"></div>'}
                             <div>
-                                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:0.6rem;">
-                                    <span style="font-family:var(--font-ui); font-size:1rem; font-weight:950; opacity:0.3; letter-spacing:0.15em; text-transform:uppercase;">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
-                                    <span style="background:${bColor}; color:${sColor}; padding:0.3rem 1.2rem; border-radius:0.6rem; font-family:var(--font-ui); font-size:0.95rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.02);">${sText}</span>
+                                <div style="display:flex; gap:1.2rem; align-items:center; margin-bottom:0.8rem;">
+                                    <span style="font-family:var(--font-ui); font-size:1.15rem; font-weight:950; opacity:0.65; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-ink);">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
+                                    <span style="background:${bColor}; color:${sColor}; padding:0.4rem 1.4rem; border-radius:0.8rem; font-family:var(--font-ui); font-size:1.1rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.05);">${sText}</span>
                                 </div>
                                 <h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:1.5rem; opacity:0.33;" class="task-actions">
-                            <div style="font-size:1.1rem; font-family:var(--font-ui); font-weight:850;">${new Date(task.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
-                            ${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">✏️</button>` : ''}
-                            <button class="btn-delete-task" style="background:none; border:none; font-size:1.4rem; cursor:pointer;">🗑️</button>
+                        <div style="display:flex; align-items:center; gap:2rem; opacity:0.7;" class="task-actions">
+                            <div style="font-size:1.25rem; font-family:var(--font-ui); font-weight:900; color:var(--color-ink);">${new Date(task.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+                            ${task.computedStatus === 'PENDING' ? `<button class="btn-edit-task" style="font-size:1.4rem; cursor:pointer; border:none;">✏️</button>` : ''}
+                            <button class="btn-delete-task" style="font-size:1.4rem; cursor:pointer; border:none;">🗑️</button>
                         </div>
                     `;
                     

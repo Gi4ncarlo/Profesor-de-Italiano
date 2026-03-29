@@ -184,14 +184,14 @@ export const StudentStatsPage = (navigate, user) => {
             <h3 class="stats-section-title">Cronaca dell'Apprendimento</h3>
             
             <div style="margin-bottom: 2rem;">
-                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem;">Filtra per Stato</div>
+                <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.2rem; color: var(--color-ink);">Filtra per Stato</div>
                 <div class="status-filters" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
                     ${['Tutti', 'Completati', 'Da Correggere', 'In Svolgimento'].map(s => `
                         <button class="status-chip ${statusFilter === s ? 'active' : ''}" data-status="${s}" style="
-                            padding: 0.7rem 1.4rem; border-radius: 12px; border: 1.5px solid ${statusFilter === s ? 'var(--color-ink)' : 'rgba(0,0,0,0.06)'};
+                            padding: 1rem 2rem; border-radius: 14px; border: 1.5px solid ${statusFilter === s ? 'var(--color-ink)' : 'rgba(0,0,0,0.08)'};
                             background: ${statusFilter === s ? 'var(--color-ink)' : 'white'};
                             color: ${statusFilter === s ? 'white' : 'var(--color-ink)'};
-                            font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.05em;
+                            font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em;
                             cursor: pointer; transition: all 0.3s;
                         ">
                             ${s}
@@ -201,14 +201,14 @@ export const StudentStatsPage = (navigate, user) => {
             </div>
 
             <div style="margin-bottom: 3.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem;">Filtra per Tipologia</div>
+                <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.2rem; color: var(--color-ink);">Filtra per Tipologia</div>
                 <div class="history-filters" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
                     ${['Tutte', 'Traduzioni', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(f => `
                         <button class="filter-chip ${filter === f ? 'active' : ''}" data-filter="${f}" style="
-                            padding: 0.7rem 1.4rem; border-radius: 20px; border: 1.5px solid ${filter === f ? 'var(--color-terracota)' : 'rgba(0,0,0,0.06)'};
+                            padding: 1rem 2rem; border-radius: 50px; border: 1.5px solid ${filter === f ? 'var(--color-terracota)' : 'rgba(0,0,0,0.08)'};
                             background: ${filter === f ? 'var(--color-terracota)' : 'white'};
                             color: ${filter === f ? 'white' : 'var(--color-ink)'};
-                            font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.05em;
+                            font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em;
                             cursor: pointer; transition: all 0.3s;
                         ">
                             ${f}
@@ -224,9 +224,9 @@ export const StudentStatsPage = (navigate, user) => {
             const groups = groupActivityByMonth(filteredActivity);
             Object.keys(groups).forEach(month => {
                 html += `<div class="month-header" style="
-                    margin-top: 4rem; margin-bottom: 2rem; padding-bottom: 1rem;
-                    border-bottom: 1px solid rgba(0,0,0,0.05);
-                    font-family: var(--font-titles); font-size: 1.4rem; color: var(--color-terracota); font-weight: 700;
+                    margin-top: 5rem; margin-bottom: 2.5rem; padding-bottom: 1.2rem;
+                    border-bottom: 1.5px solid rgba(0,0,0,0.08);
+                    font-family: var(--font-titles); font-size: 2rem; color: var(--color-terracota); font-weight: 700;
                     text-transform: capitalize;
                 ">${month}</div>`;
 
@@ -244,15 +244,15 @@ export const StudentStatsPage = (navigate, user) => {
                             cursor: pointer;
                         ">
                             <div style="flex: 1;">
-                                <div style="display: flex; gap: 0.8rem; align-items: center; margin-bottom: 0.3rem;">
-                                    <span class="stats-badge ${badgeClass}" style="font-size: 0.75rem; padding: 0.3rem 0.8rem; border-radius: 6px;">${badgeText}</span>
-                                    <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 900; opacity: 0.2; text-transform: uppercase;">${act.type}</span>
+                                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
+                                    <span class="stats-badge ${badgeClass}" style="font-size: 0.95rem; padding: 0.4rem 1.2rem; border-radius: 10px; font-weight: 950;">${badgeText}</span>
+                                    <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.6; text-transform: uppercase; color: var(--color-ink);">${act.type}</span>
                                 </div>
-                                <h4 style="font-family: var(--font-titles); font-size: 1.4rem; margin: 0; color: var(--color-ink); font-weight: 500;">${act.title}</h4>
+                                <h4 style="font-family: var(--font-titles); font-size: 1.8rem; margin: 0; color: var(--color-ink); font-weight: 500;">${act.title}</h4>
                             </div>
-                            <div style="text-align: right; opacity: 0.5;">
-                                <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 850;">${new Date(act.date).getDate()} ${month.split(' ')[0]}</div>
-                                <div style="font-family: var(--font-body); font-size: 1rem;">${new Date(act.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div style="text-align: right; opacity: 1; color: var(--color-ink);">
+                                <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950;">${new Date(act.date).getDate()} ${month.split(' ')[0]}</div>
+                                <div style="font-family: var(--font-body); font-size: 1.3rem; opacity: 0.5;">${new Date(act.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</div>
                             </div>
                         </div>
                     `;

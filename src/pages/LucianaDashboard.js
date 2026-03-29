@@ -246,8 +246,8 @@ export const LucianaDashboard = (navigate, user) => {
                         </svg>
                         <div class="luciana-ring__label">
                             <span class="luciana-ring__value">${progressVal}%</span>
-                            <span class="luciana-ring__unit" style="font-weight: 900; opacity: 0.5;">ATTIVITÀ DI OGGI</span>
-                            <span class="luciana-ring__unit" style="font-size: 0.7rem; margin-top: 0.2rem; opacity: 0.3;">${shortDate.toUpperCase()}</span>
+                            <span class="luciana-ring__unit" style="font-weight: 950; opacity: 0.7; color: var(--color-ink);">ATTIVITÀ DI OGGI</span>
+                            <span class="luciana-ring__unit" style="font-size: 0.95rem; margin-top: 0.3rem; opacity: 0.5; color: var(--color-ink);">${shortDate.toUpperCase()}</span>
                         </div>
                     </div>
 
@@ -274,13 +274,13 @@ export const LucianaDashboard = (navigate, user) => {
                 if (a.status === 'reviewed') { sClass = 'luciana-badge--reviewed'; sText = 'Visto'; }
                 card.innerHTML = `
                     <div style="flex: 1;">
-                        <div style="display: flex; gap: 1.2rem; align-items: center; margin-bottom: 0.6rem;">
-                            <span style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.3; letter-spacing: 0.15em; text-transform: uppercase;">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
-                            <span class="luciana-badge ${sClass}">${sText}</span>
+                        <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.8rem;">
+                            <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.65; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink);">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
+                            <span class="luciana-badge ${sClass}" style="font-weight: 950; letter-spacing: 0.1em;">${sText}</span>
                         </div>
-                        <h4 style="font-family: var(--font-titles); font-size: 1.7rem; margin: 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
+                        <h4 style="font-family: var(--font-titles); font-size: 1.85rem; margin: 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
                     </div>
-                    <div style="font-family: var(--font-ui); font-size: 1.1rem; opacity: 0.25; font-weight: 800;">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
+                    <div style="font-family: var(--font-ui); font-size: 1.25rem; opacity: 0.65; font-weight: 850; color: var(--color-ink);">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
                 `;
                 card.onclick = () => taskModal.open(a);
                 tList.appendChild(card);

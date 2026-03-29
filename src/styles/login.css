@@ -46,9 +46,9 @@
 .login-form { width: 100%; display: flex; flex-direction: column; gap: 2.4rem; text-align: left; }
 
 .login-label {
-  font-family: var(--font-ui); font-size: 1rem; font-weight: 800;
-  text-transform: uppercase; letter-spacing: 0.18em; opacity: 0.35;
-  margin-bottom: 0.3rem; display: block;
+  font-family: var(--font-ui); font-size: 1rem; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.18em; opacity: 0.8;
+  margin-bottom: 0.8rem; display: block;
 }
 
 .login-input {
@@ -61,8 +61,8 @@
 }
 .login-input:focus { border-color: var(--color-terracota); }
 .login-input::placeholder {
-  font-style: italic; color: rgba(0,0,0,0.2);
-  font-family: var(--font-handwritten); font-size: 1.6rem;
+  font-style: italic; color: rgba(0,0,0,0.6);
+  font-family: var(--font-handwritten); font-size: 1.9rem;
 }
 
 .login-btn {
@@ -85,31 +85,73 @@
 
 .login-toggle {
   background: none; border: none; color: var(--color-ink);
-  font-family: var(--font-ui); font-weight: 800;
+  font-family: var(--font-ui); font-weight: 900;
   text-transform: uppercase; font-size: 1rem; letter-spacing: 0.15em;
-  cursor: pointer; opacity: 0.3; margin: 1.8rem auto 0; display: block;
-  transition: opacity 0.3s; padding: 0.5rem;
+  cursor: pointer; opacity: 0.5; margin: 1.8rem auto 0; display: block;
+  transition: all 0.3s; padding: 0.5rem;
 }
 .login-toggle:hover { opacity: 0.6; }
 
 .login-loading {
   display: none; text-align: center;
   font-family: var(--font-ui); font-size: 1rem;
-  text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.3;
+  text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.5;
   margin-bottom: 1.5rem;
 }
 
 .login-footer {
-  margin-top: 4rem;
-  font-family: var(--font-handwritten); opacity: 0.3;
-  font-size: 1.6rem; color: var(--color-terracota);
+  margin-top: 4.5rem;
+  font-family: var(--font-handwritten); opacity: 0.45;
+  font-size: 1.8rem; color: var(--color-terracota);
 }
 
 .login-pwd-wrap { position: relative; display: flex; align-items: center; }
 .login-pwd-toggle {
   position: absolute; right: 0; cursor: pointer;
-  opacity: 0.3; font-size: 1.4rem; padding: 0.5rem; transition: opacity 0.3s;
+  opacity: 0.55; font-size: 1.4rem; padding: 0.5rem; transition: opacity 0.3s;
   background: none; border: none;
+}
+
+@media (min-width: 1200px) {
+  .login-card {
+    max-width: 65rem;
+    padding: 8.5rem 7.5rem;
+    border-radius: 4.5rem;
+  }
+  .login-title {
+    font-size: 5rem;
+    margin-bottom: 2rem;
+  }
+  .login-title__highlight {
+    font-size: 5.6rem;
+    margin-top: 1rem;
+  }
+  .login-label {
+    font-size: 1.35rem;
+    margin-bottom: 1.2rem;
+  }
+  .login-input {
+    font-size: 2.6rem;
+    padding: 2rem 0;
+  }
+  .login-input::placeholder {
+    font-size: 2.8rem;
+  }
+  .login-btn {
+    padding: 2.2rem 4rem;
+    font-size: 1.6rem;
+    margin-top: 1.5rem;
+  }
+  .login-toggle {
+    font-size: 1.35rem;
+    margin-top: 4rem;
+    opacity: 0.7;
+  }
+  .login-footer {
+    font-size: 2.6rem;
+    margin-top: 8rem;
+    opacity: 0.6;
+  }
 }
 
 @media (max-width: 768px) {

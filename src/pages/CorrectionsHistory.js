@@ -193,7 +193,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
         content.innerHTML = `
             <div style="margin-bottom: 6rem; text-align: center;">
                 <h1 style="font-family: var(--font-heading); font-style: italic; font-size: 4.8rem; margin-bottom: 1rem;">Le mie correzioni</h1>
-                <p style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 900; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.2em;">
+                <p style="font-family: var(--font-ui); font-size: 1.3rem; font-weight: 950; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.2em; color: var(--color-ink);">
                     ${totalCount} correzioni ricevute nel tuo cuaderno digitale 📓
                 </p>
             </div>
@@ -205,7 +205,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                         padding: 0.8rem 1.8rem; border-radius: 50px; border: 1.5px solid ${filter === p ? 'var(--color-bordo)' : 'rgba(0,0,0,0.06)'};
                         background: ${filter === p ? 'var(--color-bordo)' : 'white'};
                         color: ${filter === p ? 'white' : 'var(--color-ink)'};
-                        font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.08em;
+                        font-family: var(--font-ui); font-size: 1.05rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.08em;
                         cursor: pointer; transition: all 0.25s; white-space: nowrap; flex-shrink: 0;
                     ">${p}</button>
                 `).join('')}
@@ -256,7 +256,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                                 ${TYPE_ICONS[c.task.type?.toLowerCase()] || '✒️'}
                             </div>
                             <div>
-                                <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.4rem;">
+                                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 0.5rem; color: var(--color-ink);">
                                     ${TYPE_TRANSLATIONS[c.task.type?.toLowerCase()] || c.task.type}
                                 </div>
                                 <h3 style="font-family: var(--font-titles); font-size: 2.2rem; font-weight: 600; margin: 0; color: var(--color-ink);">${c.task.title}</h3>
@@ -266,8 +266,8 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                             </div>
                         </div>
                         <div style="text-align: right; min-width: 12rem;">
-                            <div style="font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-dorado-viejo);">${dateStr}</div>
-                            <div class="expand-indicator" style="font-size: 1.1rem; opacity: 0.2; margin-top: 0.5rem; transition: transform 0.3s;">▼ Espandi</div>
+                            <div style="font-family: var(--font-handwritten); font-size: 2.2rem; color: var(--color-dorado-viejo);">${dateStr}</div>
+                            <div class="expand-indicator" style="font-size: 1.2rem; opacity: 0.4; margin-top: 0.5rem; transition: transform 0.3s; color: var(--color-ink);">▼ Espandi</div>
                         </div>
                     </div>
                     

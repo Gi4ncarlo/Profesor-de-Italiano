@@ -10,7 +10,7 @@ export const Header = (navigate, user, { onProfile } = {}) => {
     const el = document.createElement('header');
     el.style.cssText = `
         display: flex; justify-content: space-between; align-items: center;
-        padding: 4.5rem 0; margin-bottom: 6rem; border-bottom: 1.5px solid rgba(0,0,0,0.04);
+        padding: 5.5rem 0; margin-bottom: 7.5rem; border-bottom: 2px solid rgba(0,0,0,0.06);
     `;
 
     // Dynamic Greeting based on role (Teacher = Benvenuto, Student = Benvenuta)
@@ -79,7 +79,7 @@ export const Header = (navigate, user, { onProfile } = {}) => {
     };
 
     el.innerHTML = `
-        <div style="font-family: var(--font-titles); font-size: 2.6rem; cursor:pointer; letter-spacing: -0.02em;" id="go-home">
+        <div style="font-family: var(--font-titles); font-size: 3.5rem; cursor:pointer; letter-spacing: -0.02em;" id="go-home">
            El Rincón de <span style="color: var(--color-dorado-viejo); font-style: italic; font-weight: 500;">Luci</span>
         </div>
         
@@ -107,13 +107,13 @@ export const Header = (navigate, user, { onProfile } = {}) => {
 
             <div style="display: flex; gap: 3rem; align-items: center;">
                 <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                    <span style="opacity: 0.15; font-size: 0.7rem; font-weight: 900; margin-bottom: 0.2rem;">${greeting.toUpperCase()}</span>
-                    <span style="font-weight: 700; color: var(--color-ink); font-size: 1.1rem;">${user.role === 'teacher' ? teacherName : user.name}</span>
+                    <span style="opacity: 0.6; font-size: 1.1rem; font-weight: 950; margin-bottom: 0.3rem; color: var(--color-ink);">${greeting.toUpperCase()}</span>
+                    <span style="font-weight: 700; color: var(--color-ink); font-size: 1.4rem;">${user.role === 'teacher' ? teacherName : user.name}</span>
                 </div>
                 <div style="width: 1.5px; height: 2.5rem; background: rgba(0,0,0,0.06);"></div>
-                <div style="display: flex; gap: 2.5rem;">
-                    <button id="profile-btn" style="background:none; border:none; cursor:pointer; color: var(--color-ink); font-weight: 700; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Profilo</button>
-                    <button id="logout-btn" style="background:none; border:none; cursor:pointer; color: var(--color-terracota); font-weight: 700; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Esci</button>
+                <div style="display: flex; gap: 3rem;">
+                    <button id="profile-btn" style="background:none; border:none; cursor:pointer; color: var(--color-ink); font-weight: 950; text-transform: uppercase; font-size: 1.2rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Profilo</button>
+                    <button id="logout-btn" style="background:none; border:none; cursor:pointer; color: var(--color-terracota); font-weight: 950; text-transform: uppercase; font-size: 1.2rem; letter-spacing: 0.05em; transition: opacity 0.2s;">Esci</button>
                 </div>
             </div>
         </div>

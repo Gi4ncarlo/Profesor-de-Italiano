@@ -7,7 +7,7 @@
   box-shadow: var(--shadow-premium);
   border: 1px solid rgba(0, 0, 0, 0.01);
   min-height: calc(100vh - 7rem);
-  max-width: 145rem;
+  max-width: 155rem;
   width: 100%;
   overflow-x: hidden;
 }
@@ -34,9 +34,9 @@
 
 .teacher-header p {
   font-family: var(--font-body);
-  font-size: 1.05rem;
-  font-weight: 800;
-  opacity: 0.3;
+  font-size: 1.35rem;
+  font-weight: 900;
+  opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.25em;
 }
@@ -63,8 +63,8 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 600;
-  opacity: 0.55;
+  font-weight: 700;
+  opacity: 0.8;
   color: var(--color-ink);
 }
 
@@ -93,12 +93,12 @@
 
 .teacher-label {
   font-family: var(--font-body);
-  font-size: 1rem;
-  font-weight: 800;
-  opacity: 0.35;
+  font-size: 1.35rem;
+  font-weight: 1000;
+  opacity: 0.95;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
   display: block;
 }
 
@@ -120,9 +120,9 @@
 }
 
 .teacher-input::placeholder {
-  color: rgba(0, 0, 0, 0.18);
+  color: rgba(0, 0, 0, 0.45);
   font-family: var(--font-handwritten);
-  font-size: 1.6rem;
+  font-size: 1.8rem;
 }
 
 .teacher-textarea {
@@ -185,13 +185,14 @@
 /* Task list */
 .teacher-tasks-header {
   font-family: var(--font-body);
-  font-size: 1.05rem;
-  font-weight: 800;
-  opacity: 0.4;
+  font-size: 1.35rem;
+  font-weight: 1000;
+  opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   display: block;
+  color: var(--color-ink);
 }
 
 .teacher-task-card {
@@ -249,4 +250,36 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* Actions buttons animations */
+.btn-delete-task, .btn-edit-task {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  width: 3.8rem;
+  height: 3.8rem;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+
+.btn-delete-task:hover {
+  transform: scale(1.4);
+  background: #fee2e2 !important;
+  animation: rumbleTrash 0.2s infinite linear;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.12);
+}
+
+.btn-edit-task:hover {
+  transform: scale(1.3) rotate(15deg);
+  background: #ecfdf5 !important;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.1);
+}
+
+@keyframes rumbleTrash {
+  0% { transform: scale(1.4) rotate(0deg); }
+  25% { transform: scale(1.4) rotate(-8deg); }
+  75% { transform: scale(1.4) rotate(8deg); }
+  100% { transform: scale(1.4) rotate(0deg); }
 }

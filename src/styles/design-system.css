@@ -74,10 +74,10 @@ blockquote, .quote {
   font-style: italic;
   font-size: 2.22rem;
   color: var(--color-terracota);
-  padding: 2rem 3rem;
-  border-left: 5px solid var(--color-terracota);
-  margin: 2rem 0;
-  opacity: 0.85;
+  padding: 2rem 3.5rem;
+  border-left: 6px solid var(--color-terracota);
+  margin: 2.5rem 0;
+  opacity: 1;
 }
 
 h3, .h3 {
@@ -202,11 +202,12 @@ input, textarea, select {
 
 .notification-header span:first-child {
     font-family: var(--font-ui) !important;
-    font-weight: 950 !important;
-    font-size: 0.95rem !important;
+    font-weight: 1000 !important;
+    font-size: 1.15rem !important;
     letter-spacing: 0.2em !important;
     text-transform: uppercase !important;
     color: var(--color-ink) !important;
+    opacity: 0.8 !important;
 }
 
 #clear-all {
@@ -277,9 +278,9 @@ input, textarea, select {
 
 .notification-time {
     font-family: var(--font-ui) !important;
-    font-size: 0.75rem !important;
-    opacity: 0.5 !important;
-    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    opacity: 0.75 !important;
+    font-weight: 900 !important;
     text-transform: uppercase !important;
 }
 

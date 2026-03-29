@@ -34,10 +34,10 @@ export const TaskDetailsPage = (navigate, user, params) => {
     styles.innerHTML = `
         .details-root { min-height: 100vh; background-color: var(--color-parchment); display: flex; flex-direction: column; }
         .details-nav { padding: 1.5rem 5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid rgba(0,0,0,0.03); background: white; }
-        .btn-back { display: flex; align-items: center; gap: 0.8rem; background: none; border: none; font-family: var(--font-ui); font-size: 0.85rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; color: var(--color-ink); opacity: 0.5; transition: opacity 0.3s; }
+        .btn-back { display: flex; align-items: center; gap: 0.8rem; background: none; border: none; font-family: var(--font-ui); font-size: 1.25rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; color: var(--color-ink); opacity: 0.75; transition: opacity 0.3s; }
         .btn-back:hover { opacity: 1; }
         
-        .details-main { padding: 5rem 6.5rem; max-width: 140rem; margin: 0 auto; width: 100%; flex: 1; display: grid; grid-template-columns: 1.6fr 1fr; gap: 6rem; align-items: start; }
+        .details-main { padding: 5rem 6.5rem 10rem; max-width: 155rem; margin: 0 auto; width: 100%; flex: 1; display: grid; grid-template-columns: 1.6fr 1fr; gap: 10rem; align-items: start; }
         
         .task-info-hero { background: white; border-radius: 30px; padding: 4rem; box-shadow: var(--shadow-premium); border: 1px solid rgba(0,0,0,0.01); margin-bottom: 3.5rem; position: sticky; top: 1.5rem; }
         .history-title { font-family: var(--font-heading); font-size: 2.8rem; font-weight: 500; font-style: italic; margin-bottom: 3rem; border-bottom: 1.5px solid rgba(0,0,0,0.05); padding-bottom: 1.5rem; color: var(--color-ink); }
@@ -60,10 +60,10 @@ export const TaskDetailsPage = (navigate, user, params) => {
         .btn-feedback { background: var(--color-ink); color: white; border: none; border-radius: 50px; padding: 1.4rem 4rem; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.15em; cursor: pointer; transition: all 0.4s; }
         .btn-feedback:hover { background: var(--color-terracota); transform: translateY(-3px); box-shadow: 0 15px 35px rgba(166, 77, 50, 0.3); }
         
-        .ui-label { font-family: var(--font-ui); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; opacity: 0.4; margin-bottom: 1.2rem; display: block; }
+        .ui-label { font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.25em; opacity: 0.7; margin-bottom: 1.5rem; display: block; color: var(--color-ink); }
         
         /* Status Badge */
-        .status-badge { display: inline-flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1.8rem; border-radius: 50px; font-family: var(--font-ui); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2.5rem; }
+        .status-badge { display: inline-flex; align-items: center; gap: 0.8rem; padding: 1rem 2.5rem; border-radius: 50px; font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2.5rem; }
         .status-pending { background: #fef3c7; color: #92400e; border: 1.5px solid rgba(146, 64, 14, 0.1); }
         .status-submitted { background: #dcfce7; color: #166534; border: 1.5px solid rgba(22, 101, 52, 0.1); }
         .status-reviewed { background: #eff6ff; color: #1e40af; border: 1.5px solid rgba(30, 64, 175, 0.1); }
@@ -168,11 +168,11 @@ export const TaskDetailsPage = (navigate, user, params) => {
                     h += `
                         <div style="background: white; border: 1px solid rgba(0,0,0,0.03); border-radius: 18px; padding: 2.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.01);">
                             <div style="font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-ink); margin-bottom: 0.8rem;">${front}</div>
-                            <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; margin-bottom: 0.4rem;">TRADUZZIONE</div>
-                            <div style="font-family: var(--font-body); font-size: 1.3rem; margin-bottom: 1.5rem; color: var(--color-ink);">${back}</div>
+                            <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 0.6rem;">TRADUZZIONE</div>
+                            <div style="font-family: var(--font-body); font-size: 1.5rem; margin-bottom: 2rem; color: var(--color-ink);">${back}</div>
                             ${example ? `
-                                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 850; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; margin-bottom: 0.4rem;">ESEMPIO</div>
-                                <div style="font-family: var(--font-handwritten); font-size: 1.5rem; color: var(--color-ink); opacity: 0.8; line-height: 1.3;">"${example}"</div>
+                                <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 0.6rem;">ESEMPIO</div>
+                                <div style="font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-ink); opacity: 0.9; line-height: 1.3;">"${example}"</div>
                             ` : ''}
                         </div>
                     `;
@@ -201,12 +201,12 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 
                 return `
                     <div style="margin-bottom: 2.5rem; padding: 2.5rem; background: #fffcf8; border-radius: 20px; border: 1.5px solid rgba(0,0,0,0.03);">
-                        <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.2rem; opacity: 0.5;">FRASE ORIGINALE (ITALIANO)</div>
+                        <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">FRASE ORIGINALE (ITALIANO)</div>
                         <div style="font-family: var(--font-heading); font-size: 2rem; color: var(--color-ink); margin-bottom: 2rem; padding-left: 1.5rem; border-left: 3.5px solid var(--color-terracota);">
                             "${originalText}"
                         </div>
                         
-                        <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.2rem; opacity: 0.5;">TRADUZIONE DI LUCI</div>
+                        <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">TRADUZIONE DI LUCI</div>
                         <div style="padding: 2.5rem; background: white; border: 2.5px solid ${studentTranslation ? 'rgba(0,0,0,0.05)' : '#dc2626'}; border-radius: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
                             <div class="font-editorial" style="font-size: 2.35rem; color: var(--color-ink); line-height: 1.2;">
                                 ${studentTranslation ? `"${studentTranslation}"` : '<span style="opacity:0.3; font-style: italic;">Nessuna risposta nel capitolo...</span>'}
@@ -238,7 +238,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 </div>`;
                 
                 h += `<div>
-                    <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 850; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1rem;">LA MIA RISPOSTA...</div>
+                    <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 1.5rem; opacity: 0.7;">LA MIA RISPOSTA...</div>
                     <div class="bubble-l" style="margin: 0; width: 100%; max-width: 100%; box-sizing: border-box;">${studentResp}</div>
                 </div>`;
             }
@@ -457,8 +457,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
         nav.className = 'details-nav';
         nav.innerHTML = `
             <button class="btn-back" id="btn-back"><span>←</span> RITORNA</button>
-            <div style="font-family: var(--font-titles); font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em;">Registro <span style="font-style: italic; color: var(--color-terracota);">Didattico</span></div>
-            <div style="width: 45px; height: 45px; background: var(--color-ink); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-family: var(--font-titles);">${user.name.charAt(0)}</div>
+            <div style="font-family: var(--font-titles); font-size: 2.8rem; font-weight: 700; letter-spacing: -0.01em;">Registro <span style="font-style: italic; color: var(--color-terracota);">Didattico</span></div>
+            <div style="width: 55px; height: 55px; background: var(--color-ink); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-family: var(--font-titles);">${user.name.charAt(0)}</div>
         `;
         nav.querySelector('#btn-back').onclick = () => navigate('/dashboard');
         
@@ -499,8 +499,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
                         <div style="display: flex; gap: 1.8rem; align-items: center;">
                             <div style="width: 55px; height: 55px; border-radius: 12px; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: #92400e;">${studentName.charAt(0)}</div>
                             <div>
-                                <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink);">${studentName}</div>
-                                <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 850; margin-top: 0.3rem;">Status: Pendente 🪶</div>
+                                <div style="font-family: var(--font-titles); font-size: 2.2rem; color: var(--color-ink);">${studentName}</div>
+                                <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Status: Pendente 🪶</div>
                             </div>
                         </div>
                         <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 900; color: #92400e; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.1em;">In attesa di Luci</div>
@@ -512,8 +512,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
                         <div style="display: flex; gap: 1.8rem; align-items: center;">
                             <div style="width: 55px; height: 55px; border-radius: 12px; background: var(--color-crema-oscuro); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-terracota);">${studentName.charAt(0)}</div>
                             <div>
-                                <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink);">${studentName}</div>
-                                <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 850; margin-top: 0.3rem;">Consegnato il: ${new Date(sub.created_at).toLocaleString('it-IT')}</div>
+                                <div style="font-family: var(--font-titles); font-size: 2.2rem; color: var(--color-ink);">${studentName}</div>
+                                <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Consegnato il: ${new Date(sub.created_at).toLocaleString('it-IT')}</div>
                             </div>
                         </div>
                         <div class="status-badge ${isReviewed ? 'status-reviewed' : 'status-submitted'}">
@@ -606,22 +606,22 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 <span class="ui-label">ATTO DIDATTICO</span>
                 <h1 style="font-family: var(--font-heading); font-size: 3.5rem; font-weight: 700; line-height: 1; margin-bottom: 3rem; color: var(--color-ink); border-bottom: 1.5px solid rgba(0,0,0,0.04); padding-bottom: 1.5rem;">${task.title}</h1>
                 
-                <div style="margin-bottom: 3rem;">
-                    <span class="ui-label" style="font-size: 0.7rem; opacity: 0.3;">CONTENUTO DELL'ATTO</span>
+                <div style="margin-bottom: 4rem;">
+                    <span class="ui-label" style="font-size: 1.1rem; opacity: 0.6;">CONTENUTO DELL'ATTO</span>
                     ${renderTaskItems()}
                 </div>
 
-                <div style="padding: 2rem; background: #fffcf8; border-radius: 15px; border: 1px solid rgba(166, 77, 50, 0.05);">
-                    <span class="ui-label" style="font-size: 0.7rem; opacity: 0.3; margin-bottom: 0.5rem;">TIPO ATTO</span>
-                    <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 850; color: var(--color-terracota); letter-spacing: 0.1em;">
+                <div style="padding: 2.5rem; background: #fffcf8; border-radius: 15px; border: 1.5px solid rgba(166, 77, 50, 0.08);">
+                    <span class="ui-label" style="font-size: 1.1rem; opacity: 0.6; margin-bottom: 0.8rem;">TIPO ATTO</span>
+                    <div style="font-family: var(--font-ui); font-size: 1.3rem; font-weight: 950; color: var(--color-terracota); letter-spacing: 0.1em;">
                         ${TYPE_TRANSLATIONS[task.type] || task.type.toUpperCase()}
                     </div>
                 </div>
             </div>
 
-            <div style="background: #43191a; color: white; border-radius: 30px; padding: 4.5rem; box-shadow: 0 15px 50px rgba(67, 25, 26, 0.3);">
-                <h4 style="font-family: var(--font-titles); font-size: 2.2rem; margin-bottom: 1.5rem;">Libro del Maestro</h4>
-                <p style="font-family: var(--font-body); font-size: 1.25rem; opacity: 0.75; line-height: 1.6;">
+            <div style="background: #43191a; color: white; border-radius: 30px; padding: 5.5rem; box-shadow: 0 15px 50px rgba(67, 25, 26, 0.3);">
+                <h4 style="font-family: var(--font-titles); font-size: 2.8rem; margin-bottom: 2rem;">Libro del Maestro</h4>
+                <p style="font-family: var(--font-body); font-size: 1.5rem; opacity: 0.95; line-height: 1.6;">
                     Cada trazo de Luci es valentía. Tu luz guía su pluma. ✨
                 </p>
             </div>

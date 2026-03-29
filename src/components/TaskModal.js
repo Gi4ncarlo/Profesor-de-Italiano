@@ -36,11 +36,11 @@ export const TaskModal = (onComplete) => {
             box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         ">×</button>
         <div style="text-align: center; margin-bottom: 5.5rem; position: relative;">
-            <div style="font-family: var(--font-body); font-size: 1.15rem; font-weight: 700; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 1.8rem;">Registro d'Apprendimento</div>
-            <h2 style="font-family: var(--font-heading); font-size: clamp(3rem, 5vw, 4rem); font-weight: 700; margin: 0; color: var(--color-ink); line-height: 1; letter-spacing: -0.5px;">${task.title || 'Senza Titolo'}</h2>
-            <div style="width: 6rem; height: 1.5px; background: var(--color-bordo); margin: 3rem auto; opacity: 0.12;"></div>
-            <div style="font-family: var(--font-body); font-size: 1.1rem; font-weight: 700; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.2em;">A cura di ${task.master_name || 'Maestro Giancarlo'} 🎨</div>
-            <div id="autosave-status" style="font-family: var(--font-body); font-size: 1rem; color: #a67d32; opacity: 0.8; margin-top: 1.5rem; display: none;">
+            <div style="font-family: var(--font-body); font-size: 1.2rem; font-weight: 800; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 2rem;">Registro d'Apprendimento</div>
+            <h2 style="font-family: var(--font-heading); font-size: clamp(3.5rem, 6vw, 4.5rem); font-weight: 700; margin: 0; color: var(--color-ink); line-height: 1; letter-spacing: -0.5px;">${task.title || 'Senza Titolo'}</h2>
+            <div style="width: 8rem; height: 1.5px; background: var(--color-bordo); margin: 3.5rem auto; opacity: 0.15;"></div>
+            <div style="font-family: var(--font-body); font-size: 1.2rem; font-weight: 800; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.2em;">A cura di ${task.master_name || 'Maestro Giancarlo'} 🎨</div>
+            <div id="autosave-status" style="font-family: var(--font-body); font-size: 1.15rem; color: #a67d32; opacity: 0.9; margin-top: 2rem; display: none;">
                 Borrador guardado <span id="save-time"></span> ✓
             </div>
         </div>
@@ -61,9 +61,9 @@ export const TaskModal = (onComplete) => {
         
         return `
             <div style="margin-bottom: 6rem; animation: coutureSlideIn 0.6s ease-out forwards;">
-                <div style="font-family: var(--font-body); font-size: 1rem; font-weight: 800; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.2rem; color: var(--color-bordo); display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-body); font-size: 1.15rem; font-weight: 900; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.2rem; color: var(--color-bordo); display: flex; align-items: center; gap: 1.5rem;">
                     <span>CORREZIONE DEL MAESTRO</span>
-                    <div style="flex: 1; height: 1.3px; background: var(--color-bordo); opacity: 0.1;"></div>
+                    <div style="flex: 1; height: 1.5px; background: var(--color-bordo); opacity: 0.15;"></div>
                 </div>
                 <div style="background: #fffcfb; border-radius: 2.8rem; padding: 4.5rem 5rem; box-shadow: 0 15px 40px rgba(107, 16, 36, 0.04); border: 1.5px solid rgba(107, 16, 36, 0.08); position: relative; overflow: hidden; transform: rotate(-0.5deg);">
                     <div style="position: absolute; right: 2rem; bottom: -2rem; font-size: 18rem; font-family: var(--font-heading); color: var(--color-bordo); opacity: 0.03; pointer-events: none;">"</div>
@@ -89,9 +89,9 @@ export const TaskModal = (onComplete) => {
 
             return `
                 <div style="margin-bottom: 4.5rem;">
-                    <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                    <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                         <span>RIEMPI GLI SPAZI</span>
-                        <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                        <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 3.5rem;">
                         ${c.items.map((it, idx) => {
@@ -125,9 +125,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>RIEMPI GLI SPAZI</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 8.5rem 7.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     <div style="font-family: var(--font-body); font-size: 3.2rem; line-height: 2.4; color: var(--color-ink);">
@@ -162,23 +162,23 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>DETTAGLI ROLEPLAY</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     <!-- Maestro Section -->
                     <div style="margin-bottom: 5rem;">
-                        <div style="font-family: var(--font-ui); font-size: 1.05rem; font-weight: 950; opacity: 0.8; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.35em; margin-bottom: 2rem;">Maestro dice..</div>
-                        <p style="font-family: var(--font-body); font-size: 2.8rem; line-height: 1.8; color: var(--color-ink); opacity: 0.9;">${contentStr}</p>
+                        <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; opacity: 0.85; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.35em; margin-bottom: 2.2rem;">Maestro dice..</div>
+                        <p style="font-family: var(--font-body); font-size: 2.8rem; line-height: 1.8; color: var(--color-ink); opacity: 1;">${contentStr}</p>
                     </div>
 
-                    <div style="width: 100%; height: 1.5px; background: rgba(0,0,0,0.03); margin: 5rem 0;"></div>
+                    <div style="width: 100%; height: 1.5px; background: rgba(0,0,0,0.06); margin: 5rem 0;"></div>
 
                     <!-- Student Section -->
                     <div>
-                        <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.6; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.35em; margin-bottom: 2rem;">La mia risposta..</div>
+                        <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.35em; margin-bottom: 2.2rem;">La mia risposta..</div>
                         <textarea class="task-textarea" placeholder="La tua respuesta..." style="
                             min-height: 24rem; font-size: 2.6rem; padding: 3rem;
                             background: ${isReadOnly ? '#f8fbfc' : 'white'};
@@ -214,9 +214,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>SCELTA MULTIPLA</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 6.5rem 7.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     <div style="font-family: var(--font-body); font-size: 2.8rem; line-height: 2.2; color: var(--color-ink);">
@@ -291,9 +291,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>TRADUZIONE</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 4rem;">
@@ -301,12 +301,12 @@ export const TaskModal = (onComplete) => {
                         <div style="background: white; border-radius: 3rem; padding: 5rem 6.5rem; box-shadow: 0 15px 45px rgba(0,0,0,0.02); border: 1.5px solid rgba(0,0,0,0.01);">
                             <div style="display: flex; gap: 3rem; align-items: start;">
                                 <div style="flex: 1;">
-                                    <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.5rem; opacity: 0.6;">Originale</div>
-                                    <p style="font-family: var(--font-body); font-size: 2.2rem; line-height: 1.4; color: var(--color-ink); font-weight: 600;">${p.italiano || p.it}</p>
+                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.8rem; opacity: 0.75;">Originale</div>
+                                    <p style="font-family: var(--font-body); font-size: 2.22rem; line-height: 1.5; color: var(--color-ink); font-weight: 700;">${p.italiano || p.it}</p>
                                 </div>
-                                <div style="width: 5rem; height: 5rem; border-radius: 50%; background: #fffcfb; border: 1.5px solid rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: center; font-size: 2.22rem; color: var(--color-terracota); margin-top: 2rem;">→</div>
+                                <div style="width: 5.5rem; height: 5.5rem; border-radius: 50%; background: #fffcfb; border: 1.5px solid rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; font-size: 2.4rem; color: var(--color-terracota); margin-top: 2rem;">→</div>
                                 <div style="flex: 1.2;">
-                                    <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.5rem; opacity: 0.6;">Tua Traduzione</div>
+                                    <div style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 950; color: var(--color-bordo); text-transform: uppercase; letter-spacing: 0.3em; margin-bottom: 1.8rem; opacity: 0.75;">Tua Traduzione</div>
                                     <textarea class="task-input task-textarea-small" data-idx="${idx}" placeholder="Digita qui..." style="
                                         width: 100%; border: none; background: ${isReadOnly ? '#f8fbfc' : 'rgba(0,0,0,0.02)'}; 
                                         font-family: var(--font-handwritten); font-size: 2.4rem; color: ${isReadOnly ? '#0057b7' : 'var(--color-ink)'};
@@ -357,9 +357,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>RIORDINA LA FRASE 🧩</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
 
                 <div style="background: white; border-radius: 3rem; padding: 4.5rem; box-shadow: 0 10px 40px rgba(0,0,0,0.02); border: 1.5px solid rgba(0,0,0,0.03); margin-bottom: 4rem;">
@@ -409,9 +409,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>SCEGLI LA TRADUZIONE CORRETTA 🌍</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     <div style="font-family: var(--font-handwritten); font-size: 3.8rem; color: var(--color-ink); text-align: center; margin-bottom: 5rem; line-height: 1.3; background: #fffcfb; border-radius: 2rem; padding: 3rem 4rem; border: 1.5px solid rgba(107,16,36,0.06);">
@@ -456,9 +456,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>CORREGGI LA FRASE ✏️</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     <div style="margin-bottom: 4rem;">
@@ -488,9 +488,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 3.5rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>ATELIER DEL LESSICO 📚</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 4rem;">
                     ${words.map((w, idx) => {
@@ -533,9 +533,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
                     <span>DETTATO 🎧</span>
-                    <div style="flex: 1; height: 1.3px; background: rgba(0,0,0,0.1);"></div>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
                     ${!isReadOnly ? `
@@ -566,9 +566,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
-                    <span style="display: flex; align-items: center; gap: 1.5rem;"><span>MEMORIA 🃏</span> <div style="height: 1.3px; width: 50px; background: rgba(0,0,0,0.1);"></div></span>
-                    ${isReadOnly ? `<span style="font-size: 1.4rem; font-weight: 700; color: var(--color-olive);">Completato in ${attempts || '?'} tentativi</span>` : `<span id="memory-score" style="font-size: 1.4rem; font-weight: 700; color: var(--color-ink);">Tentativi: 0</span>`}
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <span style="display: flex; align-items: center; gap: 1.5rem;"><span>MEMORIA 🃏</span> <div style="height: 1.5px; width: 60px; background: rgba(0,0,0,0.15);"></div></span>
+                    ${isReadOnly ? `<span style="font-size: 1.6rem; font-weight: 800; color: var(--color-olive);">Completato in ${attempts || '?'} tentativi</span>` : `<span id="memory-score" style="font-size: 1.6rem; font-weight: 800; color: var(--color-ink);">Tentativi: 0</span>`}
                 </div>
                 <div style="background: rgba(0,0,0,0.02); border-radius: 3.5rem; padding: 5rem 6.5rem; border: 1px solid rgba(0,0,0,0.03);">
                     ${isReadOnly ? 
@@ -603,9 +603,9 @@ export const TaskModal = (onComplete) => {
 
         return `
             <div style="margin-bottom: 4.5rem;">
-                <div style="font-family: var(--font-ui); font-size: 1rem; font-weight: 950; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
-                    <span style="display: flex; align-items: center; gap: 1.5rem;"><span>VELOCITÀ ⚡</span> <div style="height: 1.3px; width: 50px; background: rgba(0,0,0,0.1);"></div></span>
-                    ${isReadOnly ? `<span style="font-size: 1.4rem; font-weight: 700; color: var(--color-terracota);">Score: ${score} parole</span>` : `<span id="speed-timer" style="font-size: 2rem; font-weight: 800; color: var(--color-ink); font-variant-numeric: tabular-nums;">60s</span>`}
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <span style="display: flex; align-items: center; gap: 1.5rem;"><span>VELOCITÀ ⚡</span> <div style="height: 1.5px; width: 60px; background: rgba(0,0,0,0.15);"></div></span>
+                    ${isReadOnly ? `<span style="font-size: 1.6rem; font-weight: 800; color: var(--color-terracota);">Score: ${score} parole</span>` : `<span id="speed-timer" style="font-size: 2.4rem; font-weight: 900; color: var(--color-ink); font-variant-numeric: tabular-nums;">60s</span>`}
                 </div>
                 <div style="background: var(--color-espresso); border-radius: 3.5rem; padding: 6rem 5rem; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(28,15,7,0.15);">
                     ${!isReadOnly ? `<div id="speed-progress" style="position: absolute; bottom: 0; left: 0; height: 6px; background: var(--color-terracota); width: 100%; transform-origin: left; transition: transform 1s linear;"></div>` : ''}
