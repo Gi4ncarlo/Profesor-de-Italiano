@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabaseClient';
+import { supabase, deleteStudentData } from '../services/supabase';
 import { LoadingSkeleton } from '../components/Loading';
 
 export const StudentStatsPage = (navigate, user) => {
@@ -293,13 +293,13 @@ export const StudentStatsPage = (navigate, user) => {
                 const conf = confirm(`Attenzione Giancarlo!\n\nStai per eliminare definitivamente l'account di ${studentData.name} e tutto il suo storico di aprendizaje.\n\nQuesta azione non puede essere annullata. Vuoi davvero procedere?`);
                 if (conf) {
                     try {
-                        const { error } = await supabase.auth.admin?.deleteUser(studentData.id) || await supabase.from('profiles').delete().eq('id', studentData.id);
-                        if (error) throw error;
-                        alert("Account eliminato con successo.");
+                        const { success, error } = await deleteStudentData(studentData.id);
+                        if (!success) throw error;
+                        alert("Account e dati eliminati con successo dal laboratorio.");
                         window.history.back();
                     } catch (e) {
                         console.error(e);
-                        alert("Impossibile eliminare l'account in questo momento. Magari controlla i permessi o le dipendenze.");
+                        alert("Impossibile procedere con la pulizia profonda. Potrebbero esserci vincoli di sistema.");
                     }
                 }
             };

@@ -87,7 +87,27 @@ export const getTeacherTasks = async () => {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return { data, error: null };
+        
+        // Auto-cleanup per attività orfane (senza assegnazioni dovute all'eliminazione dell'alunno)
+        const validTasks = [];
+        const orphanIds = [];
+        
+        (data || []).forEach(task => {
+            if (!task.task_assignments || task.task_assignments.length === 0) {
+                orphanIds.push(task.id);
+            } else {
+                validTasks.push(task);
+            }
+        });
+
+        // Elimina in background i task rimasti senza allievo
+        if (orphanIds.length > 0) {
+            supabase.from('tasks').delete().in('id', orphanIds).then(() => {
+                console.log(`Pulizia: eliminati ${orphanIds.length} task orfani.`);
+            }).catch(e => console.error("Errore pulizia:", e));
+        }
+
+        return { data: validTasks, error: null };
     } catch (err) {
         return { data: null, error: handleSupabaseError(err, 'GetTeacherTasks') };
     }
