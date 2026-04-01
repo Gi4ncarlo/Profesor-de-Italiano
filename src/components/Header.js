@@ -154,10 +154,17 @@ export const Header = (navigate, user, { onProfile } = {}) => {
 
     el.querySelector('#clear-all').onclick = async (e) => {
         e.stopPropagation();
-        const { success } = await clearAllNotifications(user.id);
+        if (notifications.length === 0) return;
+
+        const ids = notifications.map(n => n.id);
+        const { success } = await clearAllNotifications(user.id, ids);
+        
         if (success) {
             notifications = [];
             renderNotifications();
+            toast.show("Notifiche eliminate definitivamente! ✨");
+        } else {
+            toast.show("Errore nell'eliminazione.", "error");
         }
     };
 

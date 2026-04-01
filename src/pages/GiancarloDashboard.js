@@ -267,7 +267,7 @@ export const GiancarloDashboard = (navigate, user) => {
             if (dettatoMode === 'comprensione') {
                 const refText = container.querySelector('#dettato-ref')?.value.trim();
                 if (!refText) return toast.show("Inserisci il testo di riferimento.", "error");
-                content = { type: 'dettato', mode: 'comprensione', refText };
+                content = { type: 'dettato', mode: 'comprensione', text: refText };
             } else {
                 const validQs = dettatoQuestions.filter(q => q.trim());
                 if (validQs.length === 0) return toast.show("Inserisci almeno una domanda.", "error");
@@ -277,14 +277,14 @@ export const GiancarloDashboard = (navigate, user) => {
             if (pronunciaMode === 'lettura') {
                 const text = container.querySelector('#pn-ref')?.value.trim();
                 if (!text) return toast.show("Inserisci il testo.", "error");
-                content = { type: 'pronuncia', mode: 'lettura', refText: text, note: container.querySelector('#pn-note')?.value.trim() };
+                content = { type: 'pronuncia', mode: 'lettura', text: text, note: container.querySelector('#pn-note')?.value.trim() };
             } else if (pronunciaMode === 'ripetizione') {
                 if (!audioBlob) return toast.show("Manca l'audio.", "error");
-                content = { type: 'pronuncia', mode: 'ripetizione', refText: container.querySelector('#pn-ref')?.value.trim() };
+                content = { type: 'pronuncia', mode: 'ripetizione', text: container.querySelector('#pn-ref')?.value.trim() };
             } else {
                 const text = container.querySelector('#pn-ref')?.value.trim();
                 if (!text) return toast.show("Inserisci la consegna.", "error");
-                content = { type: 'pronuncia', mode: 'parlato_libero', refText: text };
+                content = { type: 'pronuncia', mode: 'parlato_libero', text: text };
             }
         }
         

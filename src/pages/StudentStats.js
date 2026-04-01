@@ -34,11 +34,13 @@ export const StudentStatsPage = (navigate, user) => {
         if (filter !== 'Tutte') {
             const map = {
                 'Traduzioni': ['translation', 'translation_choice'],
+                'Dettato': ['dettato', 'dictation'],
+                'Pronuncia': ['pronuncia'],
                 'Ordina Frase': ['order_sentence'],
                 'Scelta Multipla': ['fill_choice'],
-                'Esercizi': ['fill', 'error_correction', 'dictation', 'memory', 'lessico', 'completare'],
+                'Esercizi': ['fill', 'error_correction', 'memory', 'lessico', 'completare'],
                 'Lessico': ['flashcard', 'flashcards'],
-                'Conversazione': ['roleplay'],
+                'Conversazione': ['roleplay', 'conversazione'],
                 'Velocità': ['speed']
             };
             const targets = map[filter] || [];
@@ -203,7 +205,7 @@ export const StudentStatsPage = (navigate, user) => {
             <div style="margin-bottom: 3.5rem;">
                 <div style="font-family: var(--font-ui); font-size: 1.2rem; font-weight: 950; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.2rem; color: var(--color-ink);">Filtra per Tipologia</div>
                 <div class="history-filters" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-                    ${['Tutte', 'Traduzioni', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(f => `
+                    ${['Tutte', 'Traduzioni', 'Dettato', 'Pronuncia', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(f => `
                         <button class="filter-chip ${filter === f ? 'active' : ''}" data-filter="${f}" style="
                             padding: 1rem 2rem; border-radius: 50px; border: 1.5px solid ${filter === f ? 'var(--color-terracota)' : 'rgba(0,0,0,0.08)'};
                             background: ${filter === f ? 'var(--color-terracota)' : 'white'};

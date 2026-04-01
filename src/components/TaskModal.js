@@ -673,9 +673,9 @@ export const TaskModal = (onComplete) => {
                         ${!isReadOnly && isComprensione ? `<div id="dettato-plays-left" style="font-family: var(--font-ui); font-size: 1.05rem; font-weight: 800; color: var(--color-ink); opacity: 0.6;">Riproduzioni rimaste: <strong>5</strong></div>` : ''}
                     </div>
 
-                    ${isReadOnly && c.text ? `
+                    ${isReadOnly && (c.text || c.refText) ? `
                     <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Testo di Riferimento</div>
-                    <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-terracota); background: rgba(196,96,58,0.05); padding: 3rem; border-radius: 1.5rem; margin-bottom: 3rem; border: 1.5px solid rgba(196,96,58,0.1);">${c.text}</div>
+                    <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-terracota); background: rgba(196,96,58,0.05); padding: 3rem; border-radius: 1.5rem; margin-bottom: 3rem; border: 1.5px solid rgba(196,96,58,0.1);">${c.text || c.refText}</div>
                     ` : ''}
 
                     ${isComprensione ? `
@@ -723,9 +723,19 @@ export const TaskModal = (onComplete) => {
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
 
                     ${c.mode === 'lettura' ? `
-                        <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Testo da Leggere</div>
-                        <div style="font-family: var(--font-body); font-size: 3rem; color: var(--color-ink); font-weight: 600; margin-bottom: 3rem; line-height: 1.4;">${c.text || ''}</div>
-                        ${c.note ? `<div style="background: #fffcf8; padding: 1.5rem 2rem; border-radius: 1rem; border: 1.5px dashed rgba(166,77,50,0.3); color: var(--color-terracota); font-family: var(--font-body); font-size: 1.4rem; margin-bottom: 3rem;">💡 ${c.note}</div>` : ''}
+                        <div style="background: #fafafa; padding: 3rem; border-radius: 24px; border: 1px solid rgba(0,0,0,0.03); margin-bottom: 3rem;">
+                            <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2rem;">Testo da Leggere</div>
+                            <div style="font-family: var(--font-body); font-size: 2.8rem; color: var(--color-ink); font-weight: 600; line-height: 1.3; letter-spacing: -0.02em;">${c.text || c.refText || ''}</div>
+                        </div>
+
+                        ${c.note ? `
+                        <div style="background: #fffcf8; padding: 2rem 2.5rem; border-radius: 20px; border: 1.5px dashed rgba(166,77,50,0.25); color: var(--color-terracota); font-family: var(--font-body); margin-bottom: 3rem; display: flex; gap: 1.5rem; align-items: flex-start;">
+                            <div style="font-size: 2rem; margin-top: -0.2rem;">💡</div>
+                            <div>
+                                <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Suggerimento del Maestro</div>
+                                <div style="font-size: 1.4rem; line-height: 1.5; color: rgba(166,77,50,0.9);">${c.note}</div>
+                            </div>
+                        </div>` : ''}
                     ` : ''}
 
                     ${c.mode === 'ripetizione' ? `

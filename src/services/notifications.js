@@ -64,16 +64,21 @@ export const deleteNotification = async (id) => {
 };
 
 /**
- * 4. Deletes all notifications for a recipient.
+ * 4. Deletes all notifications for a recipient (optionally by specific IDs).
  * @param {string} recipientId 
+ * @param {string[]} ids - Optional specific IDs to delete
  */
-export const clearAllNotifications = async (recipientId) => {
+export const clearAllNotifications = async (recipientId, ids = []) => {
     try {
-        const { error } = await supabase
-            .from('notifications')
-            .delete()
-            .eq('recipient_id', recipientId);
+        let query = supabase.from('notifications').delete();
         
+        if (ids && ids.length > 0) {
+            query = query.in('id', ids);
+        } else {
+            query = query.eq('recipient_id', recipientId);
+        }
+
+        const { error } = await query;
         if (error) throw error;
         return { success: true, error: null };
     } catch (err) {

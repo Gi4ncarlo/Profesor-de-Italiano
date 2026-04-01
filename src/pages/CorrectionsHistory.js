@@ -14,7 +14,8 @@ const TYPE_TRANSLATIONS = {
     'fill_choice': 'Scelta Multipla',
     'dictation': 'Dettato',
     'memory': 'Memoria',
-    'speed': 'Velocità'
+    'speed': 'Velocità',
+    'pronuncia': '🎤 Pronuncia'
 };
 
 const TYPE_ICONS = {
@@ -26,7 +27,8 @@ const TYPE_ICONS = {
     'fill_choice': '✅',
     'dictation': '🎧',
     'memory': '🃏',
-    'speed': '⚡'
+    'speed': '⚡',
+    'pronuncia': '🎤'
 };
 
 export const CorrectionsHistoryPage = (navigate, user) => {
@@ -75,9 +77,11 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                 'Traduzioni': ['translation', 'translation_choice'],
                 'Ordina Frase': ['order_sentence'],
                 'Scelta Multipla': ['fill_choice'],
-                'Esercizi': ['fill', 'completare', 'error_correction', 'dictation', 'memory'],
+                'Esercizi': ['fill', 'completare', 'error_correction', 'memory'],
                 'Lessico': ['flashcard', 'flashcards'],
-                'Conversazione': ['roleplay'],
+                'Conversazione': ['roleplay', 'conversazione'],
+                'Dettato': ['dettato', 'dictation'],
+                'Pronuncia': ['pronuncia'],
                 'Velocità': ['speed']
             };
             const targets = map[filter] || [];
@@ -105,6 +109,50 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                 return typeof src === 'string' ? src : JSON.stringify(src);
             } catch (e) { return String(src); }
         };
+
+        if (type === 'pronuncia') {
+            const content = c.task.content || {};
+            let audioUrl = '';
+            try {
+                const parsed = typeof ans === 'string' ? JSON.parse(ans) : ans;
+                audioUrl = parsed?.audio_url || (typeof parsed === 'string' ? parsed : '');
+            } catch(e) { audioUrl = String(ans); }
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 3rem; margin-top: 1rem;">
+                    <!-- Instruction / Text to read -->
+                    <div style="padding: 3rem; background: #fffdf9; border-radius: 24px; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 4px 20px rgba(0,0,0,0.01);">
+                        <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; color: var(--color-ink); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2rem; opacity: 0.4;">Testo da Leggere</div>
+                        <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-ink); font-weight: 500; line-height: 1.4;">
+                            "${content.text || content.refText || ''}"
+                        </div>
+                        
+                        ${content.note ? `
+                        <div style="margin-top: 2rem; padding: 1.5rem 2rem; background: #fffcf8; border-radius: 15px; border: 1.2px dashed rgba(166,77,50,0.25); color: var(--color-terracota); font-family: var(--font-body); font-size: 1.1rem; display: flex; gap: 1rem; align-items: center;">
+                            <span style="font-size: 1.4rem;">💡</span>
+                            <span>${content.note}</span>
+                        </div>` : ''}
+                    </div>
+
+                    <!-- Student's Audio -->
+                    <div style="background: #f0fdf4; padding: 3rem; border-radius: 2.5rem; border: 1.5px solid rgba(16, 185, 129, 0.15); box-shadow: 0 10px 35px rgba(16, 185, 129, 0.04);">
+                        <div style="font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; color: #065f46; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2rem; opacity: 0.6; display: flex; align-items: center; gap: 1rem;">
+                            <span>LA MIA REGISTRAZIONE ✨</span>
+                            <div style="flex: 1; height: 1px; background: rgba(6, 95, 70, 0.1);"></div>
+                        </div>
+                        ${audioUrl ? `<audio controls src="${audioUrl}" style="width: 100%; border-radius: 1rem;"></audio>` : '<p style="opacity:0.4; font-style:italic;">Nessuna registrazione trovata.</p>'}
+                    </div>
+
+                    <!-- Original Reference audio if it exists -->
+                    ${c.task.audio_url ? `
+                        <div style="padding: 2.3rem; border-radius: 1.5rem; border: 1px dashed rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: space-between; gap: 2rem;">
+                            <div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 800; color: var(--color-ink); opacity: 0.4; text-transform: uppercase;">Ascolta il Maestro 🎧</div>
+                            <audio controls src="${c.task.audio_url}" style="height: 35px;"></audio>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
 
         if (type === 'dettato' || type === 'dictation') {
             const content = c.task.content || {};
@@ -530,7 +578,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
 
             <!-- FILTERS -->
             <div class="filters-container" style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 5rem; flex-wrap: wrap;">
-                ${['Tutte', 'Traduzioni', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(p => `
+                ${['Tutte', 'Traduzioni', 'Dettato', 'Pronuncia', 'Ordina Frase', 'Scelta Multipla', 'Esercizi', 'Lessico', 'Conversazione', 'Velocità'].map(p => `
                     <button class="pill-filter ${filter === p ? 'active' : ''}" data-val="${p}" style="
                         padding: 0.8rem 1.8rem; border-radius: 50px; border: 1.5px solid ${filter === p ? 'var(--color-bordo)' : 'rgba(0,0,0,0.06)'};
                         background: ${filter === p ? 'var(--color-bordo)' : 'white'};

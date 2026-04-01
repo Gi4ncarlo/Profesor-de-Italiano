@@ -149,7 +149,11 @@ export const TaskDetailsPage = (navigate, user, params) => {
     };
 
     const renderSubmissionContent = (sub) => {
+        if (!task) return '<div style="opacity: 0.4; padding: 2rem;">Caricamento dettagli task...</div>';
+        
         const type = task.type?.toLowerCase();
+        const c = task.content || {}; // Always available now
+        
         // Fallback flexible: si sub.answers es string lo usa, si es objeto busca .data, si no []
         const rawAnswers = sub.answers || sub.content;
         const answers = (typeof rawAnswers === 'object' && rawAnswers !== null) 
@@ -157,7 +161,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
             : (rawAnswers || []);
         
         // 1. FLASHCARDS (Check by property if it exists)
-        const cards = task.content?.items || task.content?.cards || task.content?.flashcards || (Array.isArray(task.content?.data) ? task.content.data : []);
+        const cards = c.items || c.cards || c.flashcards || (Array.isArray(c.data) ? c.data : []);
         if (cards.length > 0 || type?.includes('flash') || type?.includes('lessico')) {
             let h = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem;">`;
             if (cards.length === 0) {
@@ -185,8 +189,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 2. MULTI-ITEM TRANSLATION (Tatoeba-style)
-        if (type === 'translation' || type === 'traduzione' || (task.content?.items && !task.content?.question)) {
-            const items = task.content?.pairs || task.content?.items || [];
+        if (type === 'translation' || type === 'traduzione' || (c.items && !c.question)) {
+            const items = c.pairs || c.items || [];
             // Robust answer extraction
             let studentAnswers = [];
             try {
@@ -234,12 +238,12 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 3. ROLEPLAY / CONVERSAZIONE (Check by property)
-        if (type?.includes('role') || type?.includes('conversazione') || task.content?.description || task.content?.dialogue) {
+        if (type?.includes('role') || type?.includes('conversazione') || c.description || c.dialogue) {
             let h = `<div style="display: flex; flex-direction: column; gap: 2.5rem;">`;
             
             // Support for old dialogue format if it exists
-            if (task.content?.dialogue && task.content.dialogue.length > 0) {
-                task.content.dialogue.forEach((d, i) => {
+            if (c.dialogue && c.dialogue.length > 0) {
+                c.dialogue.forEach((d, i) => {
                     h += `<div class="bubble-g">${d.giancarlo || d.giorgio || "..."}</div>`;
                     h += `<div class="bubble-l">${answers[i] || '...'}</div>`;
                 });
@@ -441,7 +445,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 7. SPEED (VELOCITY)
-        if (type === 'speed' || task.content?.type === 'speed') {
+        if (type === 'speed' || c.type === 'speed') {
             let data = { score: 0, completedIndices: [] };
             try {
                 const src = answers?.data || answers;
@@ -456,7 +460,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 data = { score: Number(answers) || 0, completedIndices: [] };
             }
             
-            const words = task.content?.words || [];
+            const words = c.words || [];
             const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
             const score = data.score || completedIndices.length;
             const isPerfect = completedIndices.length === words.length && words.length > 0;
@@ -498,7 +502,6 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
         // 8. DETTATO AUDIO
         if (type === 'dettato') {
-            const c = task.content || {};
             const isComprensione = !c.mode || c.mode === 'comprensione';
             let studentAns = '';
             try {
@@ -569,6 +572,14 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
             return `
                 <div style="display: flex; flex-direction: column; gap: 2.5rem;">
+                    ${c.text || c.refText ? `
+                        <div style="padding: 2.5rem; background: #fffdf9; border-radius: 20px; border: 1px solid rgba(0,0,0,0.03);">
+                            <span class="ui-label" style="opacity: 0.5; margin-bottom: 1rem;">TESTO DA LEGGERE</span>
+                            <div style="font-family: var(--font-body); font-size: 1.8rem; line-height: 1.4; color: var(--color-ink);">"${c.text || c.refText}"</div>
+                            ${c.note ? `<div style="margin-top: 1rem; color: var(--color-terracota); font-family: var(--font-body); font-size: 1.1rem; opacity:0.8;">💡 Suggerimento: ${c.note}</div>` : ''}
+                        </div>
+                    ` : ''}
+                    
                     ${task.audio_url ? `
                         <div>
                             <span class="ui-label" style="color: var(--color-terracota); opacity: 0.6; margin-bottom: 1rem;">AUDIO DI RIFERIMENTO 🎧</span>
@@ -716,7 +727,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 let summary = c.description || 'Nessun dettaglio aggiuntivo.';
                 if (task.type === 'dettato') {
                     summary = c.mode === 'comprensione' 
-                        ? `Trascrizione audio: "${c.refText?.substring(0, 50) || ''}..."`
+                        ? `Trascrizione audio: "${(c.text || c.refText)?.substring(0, 50) || ''}..."`
                         : `Domande su audio (${c.questions?.length || 0} quesiti)`;
                 }
                 
@@ -732,9 +743,13 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 </div>`;
             }
 
-            if (c.text) {
+            if (c.text || c.refText) {
+                const mainText = c.text || c.refText;
+                const noteSection = c.note ? `<div style="margin-top: 1.5rem; padding: 1.2rem 1.8rem; background: #fffcf8; border-radius: 12px; border: 1.2px dashed rgba(166,77,50,0.25); color: var(--color-terracota); font-family: var(--font-body); font-size: 1.1rem; display: flex; align-items: flex-start; gap: 1rem;"><div style="font-size: 1.4rem;">💡</div> <div><div style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; opacity: 0.7; margin-bottom: 0.3rem; text-transform: uppercase;">Sugerimento per Luci</div>${c.note}</div></div>` : '';
+                
                 return `<div class="content-preview">
-                    <p style="font-family: var(--font-body); font-size: 1.2rem; line-height: 1.6; color: var(--color-ink);">${c.text}</p>
+                    <p style="font-family: var(--font-body); font-size: 1.3rem; line-height: 1.6; color: var(--color-ink); white-space: pre-wrap; margin: 0;">${mainText}</p>
+                    ${noteSection}
                 </div>`;
             }
 
