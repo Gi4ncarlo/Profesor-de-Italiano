@@ -106,6 +106,63 @@ export const CorrectionsHistoryPage = (navigate, user) => {
             } catch (e) { return String(src); }
         };
 
+        if (type === 'dettato' || type === 'dictation') {
+            const content = c.task.content || {};
+            const isDomande = content.mode === 'domande';
+            const questions = content.questions || [];
+            let answersParsed = null;
+            
+            try {
+                answersParsed = typeof ans === 'string' ? JSON.parse(ans) : ans;
+                if (answersParsed && answersParsed.data) answersParsed = answersParsed.data;
+            } catch(e) { 
+                answersParsed = ans; 
+            }
+
+            let responseHtml = '';
+            if (isDomande && questions.length > 0) {
+                responseHtml = questions.map((q, i) => {
+                    const studentAnswer = (typeof answersParsed === 'object' && answersParsed !== null) 
+                        ? (answersParsed[i] || answersParsed[String(i)] || '...') 
+                        : (i === 0 ? answersParsed : '...');
+                        
+                    return `
+                        <div style="${i === questions.length - 1 ? 'margin-bottom: 0;' : 'margin-bottom: 3.5rem;'}">
+                            <div style="font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; color: #0369a1; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem; opacity: 0.4;">Domanda ${i+1}</div>
+                            <div style="font-family: var(--font-titles); font-size: 1.8rem; color: #075985; font-weight: 500; margin-bottom: 1.5rem; line-height: 1.4;">${q}</div>
+                            <div style="font-family: var(--font-body); font-size: 2rem; color: #0369a1; background: white; padding: 2rem 2.5rem; border-radius: 1.8rem; border-left: 5px solid #0ea5e9; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                                ${studentAnswer}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                const text = typeof answersParsed === 'string' ? answersParsed : (answersParsed?.text || answersParsed?.data || (typeof answersParsed === 'object' ? JSON.stringify(answersParsed) : String(answersParsed)));
+                responseHtml = `<div style="font-family: var(--font-body); font-size: 2.1rem; line-height: 1.6; color: #075985; font-weight: 500; white-space: pre-wrap;">${text || '<span style="opacity:0.3; font-style:italic;">Nessuna risposta.</span>'}</div>`;
+            }
+            
+            return `
+                <div style="display: flex; flex-direction: column; gap: 3rem; margin-top: 1rem;">
+                    <!-- Original audio from Giancarlo -->
+                    <div style="padding: 2.5rem; background: #fffdfa; border-radius: 20px; border: 1.5px solid rgba(0,0,0,0.03); box-shadow: 0 4px 15px rgba(0,0,0,0.01);">
+                        <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 950; color: var(--color-terracota); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2rem; opacity: 0.7;">Ascolta l'audio originale 🎧</div>
+                        <audio controls src="${c.task.audio_url || ''}" style="width: 100%; border-radius: 1rem; filter: saturate(0.8);"></audio>
+                    </div>
+
+                    <!-- Student's transcription or answers -->
+                    <div style="background: #f0f9ff; padding: 3.5rem; border-radius: 2.5rem; border: 1.5px solid rgba(14, 165, 233, 0.15); box-shadow: 0 10px 35px rgba(14, 165, 233, 0.04);">
+                        <div style="font-family: var(--font-ui); font-size: 0.95rem; font-weight: 950; color: #0369a1; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 2.5rem; opacity: 0.6; display: flex; align-items: center; gap: 1rem;">
+                            <span>LA MIA RISPOSTA ✨</span>
+                            <div style="flex: 1; height: 1px; background: rgba(3, 105, 161, 0.1);"></div>
+                        </div>
+                        <div id="student-response-content">
+                            ${responseHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         if (type === 'order_sentence') {
             const content = c.task.content || {};
             const correctText = content.original || content.text || content.correct_sentence || "";

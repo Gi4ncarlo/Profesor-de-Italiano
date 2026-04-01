@@ -13,6 +13,8 @@ const TYPE_TRANSLATIONS = {
     'translation_choice': 'Traduzione',
     'error_correction': 'Correzione',
     'dictation': '🎧 Dettato',
+    'dettato': '🎧 Dettato Audio',
+    'pronuncia': '🎤 Pronuncia',
     'memory': '🃏 Memoria',
     'speed': '⚡ Velocità'
 };
@@ -494,6 +496,96 @@ export const TaskDetailsPage = (navigate, user, params) => {
             `;
         }
 
+        // 8. DETTATO AUDIO
+        if (type === 'dettato') {
+            const c = task.content || {};
+            const isComprensione = !c.mode || c.mode === 'comprensione';
+            let studentAns = '';
+            try {
+                const raw = sub.answers || sub.content;
+                if (typeof raw === 'string') {
+                    if (raw.startsWith('{') || raw.startsWith('[')) {
+                        studentAns = JSON.parse(raw);
+                    } else {
+                        studentAns = raw;
+                    }
+                } else {
+                    studentAns = raw?.data ?? raw ?? (isComprensione ? '' : {});
+                }
+            } catch(e) { studentAns = isComprensione ? '' : {}; }
+
+            let html = '';
+            if (task.audio_url) {
+                html += `
+                    <div style="margin-bottom: 2.5rem;">
+                        <span class="ui-label" style="color: var(--color-terracota); opacity: 0.6; margin-bottom: 1rem;">AUDIO DEL MAESTRO 🎧</span>
+                        <audio controls src="${task.audio_url}" style="width: 100%; max-width: 400px; display: block; margin-top: 1rem;"></audio>
+                    </div>
+                `;
+            }
+
+            if (isComprensione) {
+                const text = typeof studentAns === 'string' ? studentAns : JSON.stringify(studentAns);
+                html += `
+                    <span class="ui-label" style="opacity: 0.6; margin-bottom: 1rem;">TRASCRIZIONE DI LUCI ✍️</span>
+                    <div style="font-family: var(--font-handwritten); font-size: 2.2rem; color: #1d4ed8; background: white; padding: 2.5rem; border-radius: 1.5rem; border: 2px solid rgba(29,78,216,0.1); line-height: 1.4;">
+                        ${text || '<span style="opacity:0.35; font-style:italic;">Nessuna risposta.</span>'}
+                    </div>
+                `;
+            } else {
+                const questions = c.questions || [];
+                const answers = (typeof studentAns === 'object' && studentAns !== null) ? studentAns : {};
+                html += `<div style="display: flex; flex-direction: column; gap: 2.5rem;">`;
+                questions.forEach((q, i) => {
+                    const ans = answers[i] || '';
+                    html += `
+                        <div style="background: #fffdf9; border-radius: 1.5rem; padding: 2.5rem; border: 1px solid rgba(0,0,0,0.04);">
+                            <div style="font-family: var(--font-body); font-size: 1.6rem; font-weight: 700; color: var(--color-ink); margin-bottom: 1.2rem;">${i+1}. ${q}</div>
+                            <div style="font-family: var(--font-handwritten); font-size: 2rem; color: #1d4ed8; line-height: 1.3;">
+                                ${ans || '<span style="opacity:0.35;">Nessuna risposta.</span>'}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            return html;
+        }
+
+        // 9. PRONUNCIA AUDIO
+        if (type === 'pronuncia') {
+            let audioUrl = '';
+            try {
+                const raw = sub.answers || sub.content;
+                if (typeof raw === 'string') {
+                    if (raw.startsWith('{')) {
+                        const parsed = JSON.parse(raw);
+                        audioUrl = parsed?.audio_url || '';
+                    }
+                } else {
+                    audioUrl = raw?.audio_url || '';
+                }
+            } catch(e) {}
+
+            return `
+                <div style="display: flex; flex-direction: column; gap: 2.5rem;">
+                    ${task.audio_url ? `
+                        <div>
+                            <span class="ui-label" style="color: var(--color-terracota); opacity: 0.6; margin-bottom: 1rem;">AUDIO DI RIFERIMENTO 🎧</span>
+                            <audio controls src="${task.audio_url}" style="width: 100%; max-width: 400px; display: block; margin-top: 1rem;"></audio>
+                        </div>
+                    ` : ''}
+                    <div>
+                        <span class="ui-label" style="opacity: 0.6; margin-bottom: 1rem;">REGISTRAZIONE DI LUCI 🎤</span>
+                        ${audioUrl
+                            ? `<audio controls src="${audioUrl}" style="width: 100%; max-width: 400px; display: block; margin-top: 1rem; border-radius: 2rem;"></audio>`
+                            : `<div style="font-family: var(--font-body); font-size: 1.5rem; opacity: 0.4; font-style: italic; padding: 2rem;">Nessuna registrazione caricata.</div>`
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div style="font-family: var(--font-body); font-size: 1.5rem; color: var(--color-ink); line-height: 1.6;">
                 <div style="opacity: 0.4; font-family: var(--font-ui); font-size: 0.8rem; margin-bottom: 1rem; letter-spacing: 0.1em; text-transform: uppercase;">Detalle Risposta</div>
@@ -620,8 +712,16 @@ export const TaskDetailsPage = (navigate, user, params) => {
             const items = c.items || c.pairs || c.words || c.data || [];
             
             if (!items.length && !c.text) {
+                // If it's a dettato task, use its special properties for the summary
+                let summary = c.description || 'Nessun dettaglio aggiuntivo.';
+                if (task.type === 'dettato') {
+                    summary = c.mode === 'comprensione' 
+                        ? `Trascrizione audio: "${c.refText?.substring(0, 50) || ''}..."`
+                        : `Domande su audio (${c.questions?.length || 0} quesiti)`;
+                }
+                
                 return `<p style="font-family: var(--font-body); font-size: 1.3rem; line-height: 1.6; color: var(--color-ink); font-style: italic; opacity: 0.6;">
-                    "${c.description || 'Nessun dettaglio aggiuntivo.'}"
+                    "${summary}"
                 </p>`;
             }
 
@@ -662,6 +762,13 @@ export const TaskDetailsPage = (navigate, user, params) => {
                     <span class="ui-label" style="font-size: 1.1rem; opacity: 0.6;">CONTENUTO DELL'ATTO</span>
                     ${renderTaskItems()}
                 </div>
+
+                ${task.audio_url ? `
+                <div style="margin-bottom: 4rem; padding: 2.5rem; background: #fffcf8; border-radius: 15px; border: 1.5px solid rgba(196,96,58,0.1);">
+                    <span class="ui-label" style="font-size: 1.1rem; opacity: 0.6; margin-bottom: 1rem;">AUDIO DEL MAESTRO 🎧</span>
+                    <audio controls src="${task.audio_url}" style="width: 100%; display: block; margin-top: 1rem;"></audio>
+                </div>
+                ` : ''}
 
                 <div style="padding: 2.5rem; background: #fffcf8; border-radius: 15px; border: 1.5px solid rgba(166, 77, 50, 0.08);">
                     <span class="ui-label" style="font-size: 1.1rem; opacity: 0.6; margin-bottom: 0.8rem;">TIPO ATTO</span>

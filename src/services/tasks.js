@@ -11,7 +11,7 @@ import { createNotification } from './notifications';
  * 1. Creates a new task and assigns it to a specific student.
  * @param {Object} - { title, type, content, studentId }
  */
-export const createTaskWithAssignment = async ({ title, type, content, studentId }) => {
+export const createTaskWithAssignment = async ({ title, type, content, studentId, audio_url }) => {
     try {
         // A. Get Current User (Teacher)
         const { data: { user } } = await supabase.auth.getUser();
@@ -24,6 +24,7 @@ export const createTaskWithAssignment = async ({ title, type, content, studentId
                 title,
                 type,
                 content,
+                audio_url,
                 created_by: user.id
             })
             .select().single();

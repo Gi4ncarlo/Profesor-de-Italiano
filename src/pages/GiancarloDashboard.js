@@ -9,6 +9,8 @@ import { toast } from '../components/Toast';
 import { supabase } from '../services/supabaseClient';
 import { searchTatoeba } from '../services/tatoebaService';
 import { getNotifications, markAsRead, subscribeToNotifications, getNotificationContent, clearAllNotifications, cleanupOldNotifications } from '../services/notifications';
+import { AudioRecorder } from '../components/AudioRecorder';
+import { uploadAudio } from '../services/audioService';
 
 const TYPE_TRANSLATIONS = {
     'roleplay': 'Conversazione', 'conversazione': 'Conversazione',
@@ -19,7 +21,9 @@ const TYPE_TRANSLATIONS = {
     'translation': '🌍 Traduzione',
     'translation_choice': 'Traduzione', /* Legacy */
     'error_correction': '✏️ Correzione',
-    'speed': '⚡ Velocità'
+    'speed': '⚡ Velocità',
+    'dettato': '🎧 Dettato',
+    'pronuncia': '🎤 Pronuncia'
 };
 
 export const GiancarloDashboard = (navigate, user) => {
@@ -54,6 +58,13 @@ export const GiancarloDashboard = (navigate, user) => {
     let speedDir = 'it-es';
     let notifications = [];
 
+    // Dettato & Pronuncia State
+    let dettatoMode = 'comprensione';
+    let dettatoQuestions = [''];
+    let pronunciaMode = 'lettura';
+    let audioBlob = null;
+    let taskRefText = '';
+    
     const timeAgo = (date) => {
         const seconds = Math.floor((new Date() - new Date(date)) / 1000);
         if (seconds < 60) return "adesso";
@@ -251,20 +262,60 @@ export const GiancarloDashboard = (navigate, user) => {
             const sources = validWords.map(s => ({ id: s.tatoebaId, origin: s.source || 'manual' }));
             const direction = container.querySelector('#speed-dir')?.value || 'it-es';
             content = { type: 'speed', words: validWords, direction, sources };
+        } else if (cType === 'dettato') {
+            if (!audioBlob) return toast.show("Manca l'audio registrato.", "error");
+            if (dettatoMode === 'comprensione') {
+                const refText = container.querySelector('#dettato-ref')?.value.trim();
+                if (!refText) return toast.show("Inserisci il testo di riferimento.", "error");
+                content = { type: 'dettato', mode: 'comprensione', refText };
+            } else {
+                const validQs = dettatoQuestions.filter(q => q.trim());
+                if (validQs.length === 0) return toast.show("Inserisci almeno una domanda.", "error");
+                content = { type: 'dettato', mode: 'domande', questions: validQs };
+            }
+        } else if (cType === 'pronuncia') {
+            if (pronunciaMode === 'lettura') {
+                const text = container.querySelector('#pn-ref')?.value.trim();
+                if (!text) return toast.show("Inserisci il testo.", "error");
+                content = { type: 'pronuncia', mode: 'lettura', refText: text, note: container.querySelector('#pn-note')?.value.trim() };
+            } else if (pronunciaMode === 'ripetizione') {
+                if (!audioBlob) return toast.show("Manca l'audio.", "error");
+                content = { type: 'pronuncia', mode: 'ripetizione', refText: container.querySelector('#pn-ref')?.value.trim() };
+            } else {
+                const text = container.querySelector('#pn-ref')?.value.trim();
+                if (!text) return toast.show("Inserisci la consegna.", "error");
+                content = { type: 'pronuncia', mode: 'parlato_libero', refText: text };
+            }
         }
         
         if (!selectedStudentId) return toast.show("Seleziona un allievo.", "error");
         
         try {
             isSubmitting = true; render();
+            
+            let finalAudioUrl = null;
+            if (audioBlob) {
+                const { url, error } = await uploadAudio(audioBlob, 'profesor');
+                if (error) throw new Error("Errore nel caricamento audio");
+                finalAudioUrl = url;
+            }
+
             const taskType = cType === 'flashcard' ? 'flashcards' : cType;
             if (editTaskId) {
-                const { error } = await supabase.from('tasks').update({ title, type: taskType, content }).eq('id', editTaskId);
+                const updates = { title, type: taskType, content };
+                if (finalAudioUrl) updates.audio_url = finalAudioUrl;
+                const { error } = await supabase.from('tasks').update(updates).eq('id', editTaskId);
                 if (error) throw error;
                 toast.show("Atto modificato. ✓");
                 editTaskId = null;
             } else {
-                const { error } = await createTaskWithAssignment({ title, type: taskType, content, studentId: selectedStudentId });
+                const taskData = { title, type: taskType, content, studentId: selectedStudentId };
+                if (finalAudioUrl) taskData.audio_url = finalAudioUrl;
+                // Wait, createTaskWithAssignment uses an RPC or two-step insertion.
+                // We need to modify the service `createTaskWithAssignment` to accept audio_url.
+                // Let's pass it anyway:
+                taskData.audio_url = finalAudioUrl; 
+                const { error } = await createTaskWithAssignment(taskData);
                 if (error) throw error;
                 toast.show("Atto assegnato. ✓");
             }
@@ -272,6 +323,7 @@ export const GiancarloDashboard = (navigate, user) => {
             flashcards = [{ word: '', translation: '', example: '' }];
             fcText = ""; fillChoices = []; fillSentences = []; transPairs = []; speedPairs = [];
             tcOptions = [{ text: '' }, { text: '' }, { text: '' }]; tcCorrect = '';
+            dettatoQuestions = ['']; audioBlob = null;
             refresh();
         } catch (err) { console.error(err); toast.show("Errore.", "error"); }
         finally { isSubmitting = false; render(); }
@@ -412,10 +464,12 @@ export const GiancarloDashboard = (navigate, user) => {
                         <div class="teacher-chip ${cType === 'flashcard' ? 'active' : ''}" data-type="flashcard">🎴 Lessico</div>
                         <div class="teacher-chip ${cType === 'fill' ? 'active' : ''}" data-type="fill">🖋️ Completare</div>
                         <div class="teacher-chip ${cType === 'translation' ? 'active' : ''}" data-type="translation">🌍 Traduzione</div>
-                        <div class="teacher-chip ${cType === 'fill_choice' ? 'active' : ''}" data-type="fill_choice">📝 Scelta Multipla</div>
+                        <div class="teacher-chip ${cType === 'translation_choice' ? 'active' : ''}" data-type="translation_choice">📝 Scelta Multipla</div>
                         <div class="teacher-chip ${cType === 'order_sentence' ? 'active' : ''}" data-type="order_sentence">🧩 Ordina Frase</div>
                         <div class="teacher-chip ${cType === 'error_correction' ? 'active' : ''}" data-type="error_correction">✏️ Correzione</div>
                         <div class="teacher-chip ${cType === 'speed' ? 'active' : ''}" data-type="speed">⚡ Velocità</div>
+                        <div class="teacher-chip ${cType === 'dettato' ? 'active' : ''}" data-type="dettato">🎧 Dettato</div>
+                        <div class="teacher-chip ${cType === 'pronuncia' ? 'active' : ''}" data-type="pronuncia">🎤 Pronuncia</div>
                     </nav>
                     <div class="teacher-form">
                         <div style="margin-bottom: 3rem;">
@@ -601,6 +655,85 @@ export const GiancarloDashboard = (navigate, user) => {
             dContent.querySelector('#add-speed').onclick = () => { if (speedPairs.length < 15) { speedPairs.push({ it: '', es: '', source: 'manual', tatoebaId: null }); renderSpeedList(); } else toast.show("Massimo 15 parole", "error"); };
             dContent.querySelector('#speed-dir').onchange = (e) => { speedDir = e.target.value; };
             renderSpeedList();
+        } else if (cType === 'dettato') {
+            dContent.innerHTML = `<div id="dettato-mode-bar" style="margin-bottom:2rem; display:flex; gap:1.5rem;">
+                <button id="dmode-comprensione" class="teacher-chip ${dettatoMode === 'comprensione'?'active':''}" style="margin:0; cursor:pointer;">${dettatoMode==='comprensione'?'●':'○'} Comprensione</button>
+                <button id="dmode-domande" class="teacher-chip ${dettatoMode === 'domande'?'active':''}" style="margin:0; cursor:pointer;">${dettatoMode==='domande'?'●':'○'} Domande</button>
+            </div>
+            <div id="recorder-mount" style="margin-bottom:3rem;"></div>
+            <div id="dettato-subconfig"></div>`;
+
+            const rMount = dContent.querySelector('#recorder-mount');
+            rMount.appendChild(AudioRecorder((blob) => { audioBlob = blob; }, 180, true));
+
+            const sub = dContent.querySelector('#dettato-subconfig');
+            const renderDettatoSub = () => {
+                // Refresh chips manually to avoid destroying recorder
+                dContent.querySelector('#dmode-comprensione').className = `teacher-chip ${dettatoMode === 'comprensione' ? 'active' : ''}`;
+                dContent.querySelector('#dmode-comprensione').textContent = `${dettatoMode==='comprensione'?'●':'○'} Comprensione`;
+                dContent.querySelector('#dmode-domande').className = `teacher-chip ${dettatoMode === 'domande' ? 'active' : ''}`;
+                dContent.querySelector('#dmode-domande').textContent = `${dettatoMode==='domande'?'●':'○'} Domande`;
+
+                if (dettatoMode === 'comprensione') {
+                    sub.innerHTML = `<label class="teacher-label">Texto de referencia (solo visible al corregir)</label><textarea id="dettato-ref" class="teacher-textarea" placeholder="Vorrei un caffè macchiato, per favore."></textarea>`;
+                    const tRef = sub.querySelector('#dettato-ref');
+                    if (tRef && taskRefText) tRef.value = taskRefText;
+                    tRef.oninput = (e) => taskRefText = e.target.value;
+                } else {
+                    const renderQList = () => {
+                        sub.innerHTML = `<label class="teacher-label">Preguntas (que responderá Luci después de escuchar)</label><div id="d-qs" style="display:flex; flex-direction:column; gap:1.5rem;"></div><button id="add-q" style="margin-top:2rem; padding:1rem 2rem; border-radius:1.5rem; background:none; border:2px dashed rgba(0,0,0,0.1); cursor:pointer;">+ Agregar domanda</button>`;
+                        const qList = sub.querySelector('#d-qs');
+                        dettatoQuestions.forEach((q, idx) => {
+                            const row = document.createElement('div');
+                            row.style.cssText = 'display:flex; gap:1rem;';
+                            row.innerHTML = `<input type="text" class="teacher-input d-q-i" data-idx="${idx}" placeholder="Ej: ¿De qué está hablando el audio?" style="flex:1;"><button class="d-q-r" data-idx="${idx}" style="background:none; border:none; opacity:0.3; cursor:pointer; font-size:1.4rem;">✕</button>`;
+                            const qi = row.querySelector('.d-q-i');
+                            qi.value = q;
+                            qi.oninput = (e) => { dettatoQuestions[e.target.dataset.idx] = e.target.value; };
+                            row.querySelector('.d-q-r').onclick = () => { dettatoQuestions.splice(idx, 1); renderQList(); };
+                            qList.appendChild(row);
+                        });
+                        sub.querySelector('#add-q').onclick = () => { if (dettatoQuestions.length < 5) { dettatoQuestions.push(''); renderQList(); } };
+                    };
+                    renderQList();
+                }
+            };
+            dContent.querySelector('#dmode-comprensione').onclick = (e) => { e.preventDefault(); dettatoMode = 'comprensione'; renderDettatoSub(); };
+            dContent.querySelector('#dmode-domande').onclick = (e) => { e.preventDefault(); dettatoMode = 'domande'; renderDettatoSub(); };
+            renderDettatoSub();
+        } else if (cType === 'pronuncia') {
+            dContent.innerHTML = `<div id="pronuncia-mode-bar" style="margin-bottom:2rem; display:flex; gap:1.5rem;">
+                <button id="pmode-lettura" class="teacher-chip ${pronunciaMode === 'lettura'?'active':''}" style="margin:0; cursor:pointer;">${pronunciaMode==='lettura'?'●':'○'} Lettura</button>
+                <button id="pmode-ripetizione" class="teacher-chip ${pronunciaMode === 'ripetizione'?'active':''}" style="margin:0; cursor:pointer;">${pronunciaMode==='ripetizione'?'●':'○'} Ripetizione</button>
+                <button id="pmode-parlato" class="teacher-chip ${pronunciaMode === 'parlato_libero'?'active':''}" style="margin:0; cursor:pointer;">${pronunciaMode==='parlato_libero'?'●':'○'} Parlato libero</button>
+            </div>
+            <div id="pronuncia-subconfig"></div>`;
+
+            const pSub = dContent.querySelector('#pronuncia-subconfig');
+            const renderPronunciaSub = () => {
+                dContent.querySelector('#pmode-lettura').className = `teacher-chip ${pronunciaMode === 'lettura' ? 'active' : ''}`;
+                dContent.querySelector('#pmode-lettura').textContent = `${pronunciaMode==='lettura'?'●':'○'} Lettura`;
+                dContent.querySelector('#pmode-ripetizione').className = `teacher-chip ${pronunciaMode === 'ripetizione' ? 'active' : ''}`;
+                dContent.querySelector('#pmode-ripetizione').textContent = `${pronunciaMode==='ripetizione'?'●':'○'} Ripetizione`;
+                dContent.querySelector('#pmode-parlato').className = `teacher-chip ${pronunciaMode === 'parlato_libero' ? 'active' : ''}`;
+                dContent.querySelector('#pmode-parlato').textContent = `${pronunciaMode==='parlato_libero'?'●':'○'} Parlato libero`;
+
+                if (pronunciaMode === 'lettura') {
+                    pSub.innerHTML = `<label class="teacher-label">Scrivi il testo da leggere</label><textarea id="pn-ref" class="teacher-textarea" placeholder="Vorrei un caffè..."></textarea>
+                    <label class="teacher-label" style="margin-top:2rem;">Nota di pronuncia (opzionale)</label><input type="text" id="pn-note" class="teacher-input" placeholder="Prestá atención a la doble T in caffè">`;
+                } else if (pronunciaMode === 'ripetizione') {
+                    pSub.innerHTML = `<div id="rec-p-mount" style="margin-bottom:3rem;"></div>
+                    <label class="teacher-label">Testo di riferimento (guida visiva per Luci)</label><textarea id="pn-ref" class="teacher-textarea" placeholder=""></textarea>`;
+                    pSub.querySelector('#rec-p-mount').appendChild(AudioRecorder((blob) => { audioBlob = blob; }, 180, true));
+                } else if (pronunciaMode === 'parlato_libero') {
+                    pSub.innerHTML = `<label class="teacher-label">Consigna (en español)</label><textarea id="pn-ref" class="teacher-textarea" placeholder="Contame qué hiciste ayer usando el passato prossimo."></textarea>`;
+                }
+                const pnf = pSub.querySelector('#pn-ref'); if (pnf) { pnf.value = taskRefText; pnf.oninput = (e) => taskRefText = e.target.value; }
+            };
+            dContent.querySelector('#pmode-lettura').onclick = (e) => { e.preventDefault(); pronunciaMode = 'lettura'; renderPronunciaSub(); };
+            dContent.querySelector('#pmode-ripetizione').onclick = (e) => { e.preventDefault(); pronunciaMode = 'ripetizione'; renderPronunciaSub(); };
+            dContent.querySelector('#pmode-parlato').onclick = (e) => { e.preventDefault(); pronunciaMode = 'parlato_libero'; renderPronunciaSub(); };
+            renderPronunciaSub();
         }
 
         // Student selector wire (again, as main is new)
@@ -700,7 +833,7 @@ export const GiancarloDashboard = (navigate, user) => {
                     const btnE = card.querySelector('.btn-edit-task'); 
                     if (btnE) btnE.onclick = (e) => {
                         e.stopPropagation(); editTaskId = task.id; const lType = task.type?.toLowerCase();
-                        if (lType.includes('role')) cType = 'roleplay'; else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard'; else if (lType === 'fill_choice') cType = 'fill_choice'; else if (lType === 'order_sentence') cType = 'order_sentence'; else if (lType === 'translation_choice') cType = 'translation_choice'; else if (lType === 'error_correction') cType = 'error_correction'; else if (lType === 'translation') cType = 'translation'; else if (lType === 'speed') cType = 'speed'; else cType = 'fill';
+                        if (lType.includes('role')) cType = 'roleplay'; else if (lType.includes('flash') || lType.includes('lessico')) cType = 'flashcard'; else if (lType === 'fill_choice') cType = 'fill_choice'; else if (lType === 'order_sentence') cType = 'order_sentence'; else if (lType === 'translation_choice') cType = 'translation_choice'; else if (lType === 'error_correction') cType = 'error_correction'; else if (lType === 'translation') cType = 'translation'; else if (lType === 'speed') cType = 'speed'; else if (lType === 'dettato') cType = 'dettato'; else if (lType === 'pronuncia') cType = 'pronuncia'; else cType = 'fill';
                         
                         if (cType === 'flashcard') flashcards = task.content?.items || [];
                         else if (cType === 'fill_choice') { fillChoices = task.content?.gaps || []; fcText = task.content?.text || ""; }
@@ -708,6 +841,9 @@ export const GiancarloDashboard = (navigate, user) => {
                         else if (cType === 'fill') fillSentences = task.content?.sentences || [{ id: Date.now(), text: task.content?.text || '', blank: '', source: 'manual', editMode: true }];
                         else if (cType === 'translation') { transPairs = task.content?.pairs || []; transDir = task.content?.direction || 'it-es'; }
                         else if (cType === 'speed') { speedPairs = task.content?.words || []; speedDir = task.content?.direction || 'it-es'; }
+                        else if (cType === 'dettato') { dettatoMode = task.content?.mode || 'comprensione'; dettatoQuestions = task.content?.questions || ['']; taskRefText = task.content?.refText || ''; audioUrl = task.content?.audio_url || null; }
+                        else if (cType === 'pronuncia') { pronunciaMode = task.content?.mode || 'lettura'; taskRefText = task.content?.refText || ''; audioUrl = task.content?.audio_url || null; }
+                        
                         render();
                         setTimeout(() => {
                             const tInp = container.querySelector('#task-title'); if (tInp) tInp.value = task.title;
@@ -716,6 +852,8 @@ export const GiancarloDashboard = (navigate, user) => {
                             const os = container.querySelector('#os-text'); if (cType === 'order_sentence' && os) os.value = task.content?.original || '';
                             const tcQ = container.querySelector('#tc-question'); if (cType === 'translation_choice' && tcQ) tcQ.value = task.content?.question || '';
                             const ecI = container.querySelector('#ec-incorrect'); const ecC = container.querySelector('#ec-correct'); if (cType === 'error_correction' && ecI && ecC) { ecI.value = task.content?.incorrect || ''; ecC.value = task.content?.correct || ''; }
+                            const dRef = container.querySelector('#dettato-ref'); if (dRef) dRef.value = taskRefText;
+                            const pRef = container.querySelector('#pn-ref'); if (pRef) pRef.value = taskRefText;
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                         }, 50);
                     };
@@ -724,7 +862,7 @@ export const GiancarloDashboard = (navigate, user) => {
             });
         }
 
-        main.querySelectorAll('.teacher-chip').forEach(chip => chip.onclick = (e) => { cType = e.currentTarget.dataset.type; render(); });
+        main.querySelectorAll('.teacher-chips .teacher-chip').forEach(chip => chip.onclick = (e) => { cType = e.currentTarget.dataset.type; render(); });
         main.querySelector('#btn-assign').onclick = handleCreateTask;
         sidebar.querySelector('#btn-nav-students').onclick = () => navigate('/student/stats');
         sidebar.querySelector('#btn-logout').onclick = async () => { await signOut(); localStorage.removeItem('luci_user'); navigate('/login'); };

@@ -1,8 +1,8 @@
 import { completeTask } from '../services/tasks';
 import { toast } from './Toast';
 import { getDraft, saveDraft } from '../services/submissions';
-
-
+import { AudioRecorder } from './AudioRecorder';
+import { uploadAudio } from '../services/audioService';
 
 const TASK_DESCRIPTIONS = {
     'fill': 'Leggi attentamente il testo e inserisci la parola corretta negli spazi vuoti per completare il senso della frase.',
@@ -15,7 +15,9 @@ const TASK_DESCRIPTIONS = {
     'order_sentence': 'Clicca sulle parole nell\'ordine corretto per formare una frase di senso compiuto.',
     'translation_choice': 'Scegli la traduzione più accurata tra le opzioni proposte per la frase presentata.',
     'error_correction': 'Individua l\'errore nella frase e scrivi la versione corretta. Fai molta attenzione ai dettagli!',
-    'dictation': 'Ascolta l\'audio e trascrivi quello che senti. Puoi riascoltare il frammento tutte le volte che vuoi.',
+    'dictation': 'Ascolta l\'audio e trascrivi quello che senti. Puoi riascoltare il frammento al massimo 5 volte.',
+    'dettato': 'Ascolta l\'audio e trascrivi quello che senti, oppure rispondi alle domande.',
+    'pronuncia': 'Registra la tua voce. Hai a disposizione un massimo di 3 tentativi.',
     'memory': 'Abbina le parole italiane con le loro traduzioni corrispondenti. Trova tutte le coppie!',
     'speed': 'Traduci più parole possibili prima che scada il tempo. Sii veloce e preciso!'
 };
@@ -635,11 +637,24 @@ export const TaskModal = (onComplete) => {
 
     const renderDettatoContent = (task) => {
         const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
+        const c = task.content || {};
+        const isComprensione = !c.mode || c.mode === 'comprensione';
+        const questions = c.questions || [];
         let studentAnswer = '';
         try {
             const src = task.student_answer || task.answers;
-            studentAnswer = typeof src === 'string' ? JSON.parse(src) : (src?.data || src || '');
-        } catch(e) {}
+            if (typeof src === 'string') {
+                if (src.startsWith('{') || src.startsWith('[')) {
+                    studentAnswer = JSON.parse(src);
+                } else {
+                    studentAnswer = src;
+                }
+            } else {
+                studentAnswer = src?.data ?? src ?? (isComprensione ? '' : {});
+            }
+        } catch(e) { 
+            studentAnswer = isComprensione ? '' : {}; 
+        }
 
         return `
             <div style="margin-bottom: 4.5rem;">
@@ -648,23 +663,96 @@ export const TaskModal = (onComplete) => {
                     <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
                 </div>
                 <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
-                    ${!isReadOnly ? `
-                    <div style="text-align: center; margin-bottom: 4rem;">
-                        <button id="dettato-play" style="width: 8rem; height: 8rem; border-radius: 50%; background: var(--color-terracota); color: white; border: none; font-size: 3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto; transition: all 0.3s; box-shadow: 0 10px 30px rgba(196, 96, 58, 0.3);">▶</button>
-                        <div style="font-family: var(--font-ui); font-size: 1.1rem; opacity: 0.5; margin-top: 2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;">Ascolta e scrivi</div>
+
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; margin-bottom: 4rem;">
+                        <audio id="dettato-audio" src="${task.audio_url || ''}" preload="auto"></audio>
+                        <div style="display: flex; gap: 1.5rem; align-items: center;">
+                            ${!isReadOnly ? `<button id="dettato-slow-btn" title="Cambia velocità" style="background: rgba(0,0,0,0.06); border: none; padding: 0.7rem 1.4rem; border-radius: 2rem; font-family: var(--font-ui); font-weight: 800; font-size: 1rem; color: var(--color-ink); cursor: pointer; transition: 0.2s;">1×</button>` : ''}
+                            <button id="dettato-play-btn" style="width: 7rem; height: 7rem; border-radius: 50%; background: var(--color-terracota); color: white; border: none; font-size: 2.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; box-shadow: 0 10px 30px rgba(196,96,58,0.3);">▶</button>
+                        </div>
+                        ${!isReadOnly && isComprensione ? `<div id="dettato-plays-left" style="font-family: var(--font-ui); font-size: 1.05rem; font-weight: 800; color: var(--color-ink); opacity: 0.6;">Riproduzioni rimaste: <strong>5</strong></div>` : ''}
                     </div>
+
+                    ${isReadOnly && c.text ? `
+                    <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Testo di Riferimento</div>
+                    <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-terracota); background: rgba(196,96,58,0.05); padding: 3rem; border-radius: 1.5rem; margin-bottom: 3rem; border: 1.5px solid rgba(196,96,58,0.1);">${c.text}</div>
+                    ` : ''}
+
+                    ${isComprensione ? `
+                    <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Il Tuo Testo</div>
+                    <textarea id="dettato-input" class="teacher-textarea" placeholder="Scrivi quello che senti..." style="font-family: var(--font-handwritten); font-size: 2.8rem; color: var(--color-ink); border-radius: 1.5rem; border: 2px solid rgba(0,0,0,0.06); padding: 3rem; width: 100%; min-height: 20rem; resize: vertical;" ${isReadOnly ? 'readonly' : ''}>${typeof studentAnswer === 'string' ? studentAnswer : ''}</textarea>
                     ` : `
-                    <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Testo Originale</div>
-                    <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-terracota); background: rgba(196,96,58,0.05); padding: 3rem; border-radius: 1.5rem; margin-bottom: 3rem; border: 1.5px solid rgba(196,96,58,0.1);">
-                        ${task.content?.text || ''}
+                    <div style="display: flex; flex-direction: column; gap: 3rem;">
+                        ${questions.map((q, i) => `
+                            <div>
+                                <div style="font-family: var(--font-body); font-size: 2rem; color: var(--color-ink); font-weight: 600; margin-bottom: 1rem;">${i + 1}. ${q}</div>
+                                <textarea class="teacher-textarea dettato-q-ans" data-idx="${i}" placeholder="La tua risposta..." style="font-family: var(--font-handwritten); font-size: 2.4rem; color: var(--color-ink); border-radius: 1.5rem; border: 2px solid rgba(0,0,0,0.06); padding: 2rem; width: 100%; min-height: 10rem; resize: vertical;" ${isReadOnly ? 'readonly' : ''}>${(typeof studentAnswer === 'object' && studentAnswer !== null) ? (studentAnswer[i] || '') : ''}</textarea>
+                            </div>
+                        `).join('')}
                     </div>
                     `}
-                    <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Il Tuo Testo</div>
-                    <textarea id="dettato-input" class="teacher-textarea" placeholder="Scrivi quello che senti..." style="font-family: var(--font-handwritten); font-size: 2.8rem; color: var(--color-ink); border-radius: 1.5rem; border: 2px solid rgba(0,0,0,0.06); padding: 3rem; width: 100%; min-height: 20rem; resize: vertical;" ${isReadOnly ? 'readonly' : ''}>${studentAnswer}</textarea>
                 </div>
             </div>
         `;
     };
+
+    const renderPronunciaContent = (task) => {
+        const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
+        const c = task.content || {};
+        let existingAudioUrl = '';
+        if (isReadOnly) {
+            try {
+                const src = task.student_answer || task.answers;
+                if (typeof src === 'string') {
+                    if (src.startsWith('{')) {
+                        const parsed = JSON.parse(src);
+                        existingAudioUrl = parsed?.audio_url || '';
+                    }
+                } else {
+                    existingAudioUrl = src?.audio_url || '';
+                }
+            } catch(e) {}
+        }
+
+        return `
+            <div style="margin-bottom: 4.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; gap: 1.5rem;">
+                    <span>PRONUNCIA 🎤</span>
+                    <div style="flex: 1; height: 1.5px; background: rgba(0,0,0,0.15);"></div>
+                </div>
+                <div style="background: white; border-radius: 3.5rem; padding: 5rem 6.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.02);">
+
+                    ${c.mode === 'lettura' ? `
+                        <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Testo da Leggere</div>
+                        <div style="font-family: var(--font-body); font-size: 3rem; color: var(--color-ink); font-weight: 600; margin-bottom: 3rem; line-height: 1.4;">${c.text || ''}</div>
+                        ${c.note ? `<div style="background: #fffcf8; padding: 1.5rem 2rem; border-radius: 1rem; border: 1.5px dashed rgba(166,77,50,0.3); color: var(--color-terracota); font-family: var(--font-body); font-size: 1.4rem; margin-bottom: 3rem;">💡 ${c.note}</div>` : ''}
+                    ` : ''}
+
+                    ${c.mode === 'ripetizione' ? `
+                        <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">Ascolta e Ripeti</div>
+                        <audio controls src="${task.audio_url || ''}" style="width: 100%; max-width: 400px; margin-bottom: 2rem; display: block;"></audio>
+                        ${c.text ? `<div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-ink); margin-bottom: 3rem; opacity: 0.8; font-style: italic;">"${c.text}"</div>` : ''}
+                    ` : ''}
+
+                    ${c.mode === 'parlato_libero' ? `
+                        <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">La Consigna</div>
+                        <div style="font-family: var(--font-body); font-size: 2.2rem; color: var(--color-ink); margin-bottom: 3rem; line-height: 1.4;">${c.text || ''}</div>
+                    ` : ''}
+
+                    <div style="width: 100%; height: 1.5px; background: rgba(0,0,0,0.06); margin: 3rem 0;"></div>
+
+                    ${isReadOnly ? `
+                        <div style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; opacity: 0.35; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 1.5rem;">La Tua Registrazione</div>
+                        ${existingAudioUrl ? `<audio controls src="${existingAudioUrl}" style="width: 100%; max-width: 420px; display: block;"></audio>` : `<div style="opacity:0.5; font-family:var(--font-ui);">Nessuna registrazione.</div>`}
+                    ` : `
+                        <div id="pronuncia-recorder-mount"></div>
+                        <div id="pronuncia-attempts" style="text-align: center; margin-top: 1.5rem; font-family: var(--font-ui); font-size: 1.1rem; font-weight: 800; color: var(--color-ink); opacity: 0.6;">Tentativi rimasti: <strong>3</strong></div>
+                    `}
+                </div>
+            </div>
+        `;
+    };
+
 
     const renderMemoryContent = (task) => {
         const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
@@ -813,6 +901,8 @@ export const TaskModal = (onComplete) => {
         else if (type === 'translation_choice') modal.innerHTML += renderTranslationChoiceContent(task);
         else if (type === 'error_correction') modal.innerHTML += renderErrorCorrectionContent(task);
         else if (type === 'dictation') modal.innerHTML += renderDictationContent(task);
+        else if (type === 'dettato') modal.innerHTML += renderDettatoContent(task);
+        else if (type === 'pronuncia') modal.innerHTML += renderPronunciaContent(task);
         else if (type === 'memory') modal.innerHTML += renderMemoryContent(task);
         else if (type === 'speed') modal.innerHTML += renderSpeedContent(task);
 
@@ -952,7 +1042,7 @@ export const TaskModal = (onComplete) => {
             });
         }
 
-        // DETTATO LOGIC
+        // LEGACY DICTATION LOGIC (uses SpeechSynthesis)
         if (type === 'dictation' && task.status === 'pending') {
             const playBtn = modal.querySelector('#dettato-play');
             let utterance = null;
@@ -965,7 +1055,7 @@ export const TaskModal = (onComplete) => {
                 }
                 utterance = new SpeechSynthesisUtterance(task.content?.text || '');
                 utterance.lang = 'it-IT';
-                utterance.rate = 0.85; 
+                utterance.rate = 0.85;
                 utterance.onend = () => {
                     playBtn.innerHTML = '▶';
                     playBtn.style.transform = 'scale(1)';
@@ -974,6 +1064,109 @@ export const TaskModal = (onComplete) => {
                 playBtn.style.transform = 'scale(0.95)';
                 window.speechSynthesis.speak(utterance);
             };
+        }
+
+        // DETTATO LOGIC (audio file from Giancarlo)
+        if (type === 'dettato') {
+            const audioEl = modal.querySelector('#dettato-audio');
+            const playBtn = modal.querySelector('#dettato-play-btn');
+            const slowBtn = modal.querySelector('#dettato-slow-btn');
+            const playsLeftEl = modal.querySelector('#dettato-plays-left');
+            const c = task.content || {};
+            const isComprensione = !c.mode || c.mode === 'comprensione';
+            const MAX_PLAYS = isComprensione ? 5 : Infinity;
+            let playsLeft = MAX_PLAYS;
+            let isSlow = false;
+
+            if (!audioEl || !playBtn) return;
+
+            if (slowBtn) {
+                slowBtn.onclick = () => {
+                    isSlow = !isSlow;
+                    audioEl.playbackRate = isSlow ? 0.7 : 1.0;
+                    slowBtn.innerText = isSlow ? '0.7×' : '1×';
+                    slowBtn.style.background = isSlow ? 'rgba(196,96,58,0.15)' : 'rgba(0,0,0,0.06)';
+                    slowBtn.style.color = isSlow ? 'var(--color-terracota)' : 'var(--color-ink)';
+                };
+            }
+
+            audioEl.onended = () => {
+                playBtn.innerHTML = '▶';
+                playBtn.style.transform = 'scale(1)';
+                playBtn.style.opacity = '1';
+            };
+
+            playBtn.onclick = () => {
+                if (!audioEl.paused) {
+                    audioEl.pause();
+                    playBtn.innerHTML = '▶';
+                    return;
+                }
+                if (MAX_PLAYS !== Infinity && playsLeft <= 0) {
+                    toast.show('Hai esaurito le riproduzioni disponibili.', 'warning');
+                    return;
+                }
+                audioEl.currentTime = 0;
+                audioEl.playbackRate = isSlow ? 0.7 : 1.0;
+                audioEl.play();
+                playBtn.innerHTML = '⏸';
+                if (isComprensione && MAX_PLAYS !== Infinity) {
+                    playsLeft--;
+                    if (playsLeftEl) {
+                        playsLeftEl.innerHTML = playsLeft > 0
+                            ? `Riproduzioni rimaste: <strong>${playsLeft}</strong>`
+                            : `<span style="color:#dc2626;">Nessuna riproduzione rimasta.</span>`;
+                    }
+                    if (playsLeft <= 0) {
+                        playBtn.style.opacity = '0.4';
+                    }
+                }
+            };
+        }
+
+        // PRONUNCIA LOGIC
+        if (type === 'pronuncia' && task.status === 'pending') {
+            const mount = modal.querySelector('#pronuncia-recorder-mount');
+            const attemptsEl = modal.querySelector('#pronuncia-attempts');
+            if (!mount) return;
+
+            const MAX_ATTEMPTS = 3;
+            let attemptsLeft = MAX_ATTEMPTS;
+            let currentBlob = null;
+
+            const updateAttempts = () => {
+                if (!attemptsEl) return;
+                attemptsEl.innerHTML = attemptsLeft > 0
+                    ? `Tentativi rimasti: <strong>${attemptsLeft}</strong>`
+                    : `<span style="color:#dc2626;">Nessun tentativo rimasto.</span>`;
+            };
+
+            const recorder = AudioRecorder((blob, confirmed) => {
+                if (blob) currentBlob = blob;
+            }, 120, false);
+
+            const origReset = recorder.querySelector ? null : null;
+            // Intercept reset to track attempts
+            const allBtns = recorder.querySelectorAll ? recorder.querySelectorAll('button') : [];
+            allBtns.forEach(btn => {
+                if (btn.innerText.includes('Volver') || btn.innerText.includes('grabar')) {
+                    const origClick = btn.onclick;
+                    btn.onclick = () => {
+                        attemptsLeft--;
+                        updateAttempts();
+                        if (attemptsLeft <= 0) {
+                            btn.disabled = true;
+                            btn.style.opacity = '0.4';
+                        }
+                        if (origClick) origClick();
+                    };
+                }
+            });
+
+            mount.appendChild(recorder);
+            // Store blob reference on mount for submit handler
+            mount._getBlob = () => currentBlob;
+            mount._attemptsLeft = () => attemptsLeft;
         }
 
         // MEMORY LOGIC
@@ -1280,6 +1473,36 @@ export const TaskModal = (onComplete) => {
                 } else if (type === 'dictation') {
                     answer = (modal.querySelector('#dettato-input')?.value || '').trim();
                     if (!answer) return toast.show("Scrivi qualcosa nel dettato!", "warning");
+                } else if (type === 'dettato') {
+                    const c = task.content || {};
+                    const isComprensione = !c.mode || c.mode === 'comprensione';
+                    if (isComprensione) {
+                        answer = (modal.querySelector('#dettato-input')?.value || '').trim();
+                        if (!answer) return toast.show("Scrivi quello che hai sentito!", "warning");
+                    } else {
+                        const qAnswers = {};
+                        modal.querySelectorAll('.dettato-q-ans').forEach(ta => {
+                            qAnswers[ta.dataset.idx] = ta.value.trim();
+                        });
+                        const hasAny = Object.values(qAnswers).some(v => v);
+                        if (!hasAny) return toast.show("Rispondi ad almeno una domanda!", "warning");
+                        answer = qAnswers;
+                    }
+                } else if (type === 'pronuncia') {
+                    const mount = modal.querySelector('#pronuncia-recorder-mount');
+                    const blob = mount?._getBlob?.();
+                    if (!blob) return toast.show("Registra la tua voce prima di consegnare!", "warning");
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerText = 'Caricamento...';
+                    try {
+                        const { url, error } = await uploadAudio(blob, 'alumna');
+                        if (error) throw new Error(error);
+                        answer = { audio_url: url };
+                    } catch(uploadErr) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerText = 'Consegnare';
+                        return toast.show("Errore nel caricamento audio. Riprova.", "error");
+                    }
                 } else if (type === 'memory') {
                     const grid = modal.querySelector('#memory-grid');
                     if (!grid || !grid.dataset.completed) return toast.show("Completa il gioco prima di consegnare!", "warning");
@@ -1330,8 +1553,18 @@ export const TaskModal = (onComplete) => {
                     return Array.from(modal.querySelectorAll('#os-target-zone .os-word-token')).map(t => t.innerText);
                 } else if (type === 'error_correction') {
                     return modal.querySelector('#ec-input')?.value || '';
-                } else if (type === 'dictation') {
-                    return modal.querySelector('#dettato-input')?.value || '';
+                } else if (type === 'dictation' || type === 'dettato') {
+                    // Collect answers based on mode
+                    const isComprensione = !task.content?.mode || task.content?.mode === 'comprensione';
+                    if (isComprensione) {
+                        return modal.querySelector('#dettato-input')?.value || '';
+                    } else {
+                        const qAnswers = {};
+                        modal.querySelectorAll('.dettato-q-ans').forEach(ta => {
+                            qAnswers[ta.dataset.idx] = ta.value.trim();
+                        });
+                        return qAnswers;
+                    }
                 }
                 return null;
             };
