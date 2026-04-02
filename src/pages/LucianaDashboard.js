@@ -22,7 +22,15 @@ const RANDOM_QUOTES = [
     '"Chi impara una nuova lingua assume una nuova anima."',
     '"Il limite del mio linguaggio significa il limite del mio mondo."',
     '"Usa la lingua per disegnare il tuo futuro."',
-    '"La lingua non è un dono, è uno strumento magico."'
+    '"La lingua non è un dono, è uno strumento magico."',
+    '"Imparare un\'altra lingua è come possedere una seconda anima."',
+    '"Una lingua diversa è una diversa visione della vita."',
+    '"Passo dopo passo, parola dopo parola, costruisci il tuo mondo."',
+    '"Non aver paura di sbagliare: è lì che nasce l\'apprendimento."',
+    '"Il tuo impegno di oggi è la tua voce di domani."',
+    '"Ogni piccolo sforzo ti porta più vicino alla meta."',
+    '"La curiosità è il motore di ogni scoperta linguistica."',
+    '"Parlare una lingua significa immergersi in una nuova cultura."'
 ];
 
 export const LucianaDashboard = (navigate, user) => {

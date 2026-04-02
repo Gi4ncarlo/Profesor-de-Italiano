@@ -171,11 +171,10 @@ export const GiancarloDashboard = (navigate, user) => {
             if (studentsRes.data && studentsRes.data.length > 0) {
                 students = studentsRes.data;
                 if (!selectedStudentId || !students.find(s => s.id === selectedStudentId)) {
-                    selectedStudentId = students[0].id;
+                    selectedStudentId = (students.length === 1) ? students[0].id : null;
                 }
-                studentName = students.find(s => s.id === selectedStudentId)?.name || "Studente";
+                studentName = selectedStudentId ? (students.find(s => s.id === selectedStudentId)?.name || "Studente") : "Classe";
             }
-
             if (tasksRes.error) throw tasksRes.error;
             tasks = (tasksRes.data || []).map(task => {
                 const assignments = task.task_assignments || [];
@@ -187,6 +186,13 @@ export const GiancarloDashboard = (navigate, user) => {
                 }
                 return { ...task, computedStatus };
             });
+
+            if (selectedStudentId) {
+                tasks = tasks.filter(t => t.task_assignments?.some(a => a.student_id === selectedStudentId));
+                studentName = students.find(s => s.id === selectedStudentId)?.name || "Studente";
+            } else {
+                studentName = "Classe";
+            }
         } catch (err) { console.error(err); toast.show("Errore nel registro.", "error"); }
         finally { isLoading = false; render(); }
     };
@@ -485,6 +491,7 @@ export const GiancarloDashboard = (navigate, user) => {
                         <div style="margin-top: 2.5rem;">
                             <label class="teacher-label">Assegna a</label>
                             <select id="student-select" class="teacher-input" style="font-size: 1.4rem; cursor: pointer;">
+                                <option value="" ${!selectedStudentId ? 'selected' : ''}>● Tutti gli Allievi</option>
                                 ${students.map(s => `<option value="${s.id}" ${s.id === selectedStudentId ? 'selected' : ''}>${s.name}</option>`).join('')}
                             </select>
                         </div>` : `
@@ -742,7 +749,7 @@ export const GiancarloDashboard = (navigate, user) => {
             studentSelect.onchange = (e) => {
                 selectedStudentId = e.target.value;
                 studentName = students.find(s => s.id === selectedStudentId)?.name || studentName;
-                const head = main.querySelector('.teacher-tasks-header'); if (head) head.textContent = `Cammino di ${studentName}`;
+                refresh();
             };
         }
 
@@ -779,9 +786,11 @@ export const GiancarloDashboard = (navigate, user) => {
                     const today = new Date();
                     const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
                     
-                    let label = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+                    let label = "";
                     if (d.toDateString() === today.toDateString()) label = "Oggi";
                     else if (d.toDateString() === yesterday.toDateString()) label = "Ieri";
+                    
+                    if (!label) return; // Skip tasks older than yesterday
                     
                     if (!groups[label]) groups[label] = [];
                     groups[label].push(t);
@@ -817,7 +826,10 @@ export const GiancarloDashboard = (navigate, user) => {
                                     <span style="font-family:var(--font-ui); font-size:1.15rem; font-weight:950; opacity:0.65; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-ink);">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
                                     <span style="background:${bColor}; color:${sColor}; padding:0.4rem 1.4rem; border-radius:0.8rem; font-family:var(--font-ui); font-size:1.1rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.05);">${sText}</span>
                                 </div>
-                                <h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5>
+                                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem;">
+                                    <h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5>
+                                    <span class="student-tag">👤 ${task.task_assignments?.[0]?.profiles?.name || '---'}</span>
+                                </div>
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:2rem; opacity:0.7;" class="task-actions">

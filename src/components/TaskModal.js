@@ -847,7 +847,14 @@ export const TaskModal = (onComplete) => {
                       <div id="speed-game-screen" style="display: none; text-align: center;">
                           <div id="speed-current-word" style="font-family: var(--font-heading); font-size: 6rem; color: var(--color-parchment); font-weight: 700; margin-bottom: 4rem; opacity: 1; transition: all 0.2s; transform-origin: center;">...</div>
                           <input type="text" id="speed-input" autocomplete="off" style="width: 100%; max-width: 40rem; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); border-radius: 2rem; padding: 2rem; font-size: 2.8rem; color: white; text-align: center; font-family: var(--font-body); outline: none; transition: border-color 0.2s;" placeholder="Scrivi qui...">
-                          <div id="speed-score-display" style="margin-top: 3rem; font-family: var(--font-ui); font-size: 1.4rem; font-weight: 800; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.2em;">Parole corrette: <span style="color: white;">0</span></div>
+                          <div style="display: flex; justify-content: center; align-items: center; gap: 3rem; margin-top: 3.5rem;">
+                              <div id="speed-counter-display" style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 900; color: var(--color-terracota); background: rgba(255,255,255,0.05); padding: 0.8rem 1.8rem; border-radius: 4rem; border: 1.5px solid rgba(255,255,255,0.1); letter-spacing: 0.15em; display: flex; align-items: center; gap: 1rem;">
+                                  <span style="opacity: 0.5;">PROGRESO</span>
+                                  <span id="speed-count-num" style="color: white; font-size: 1.6rem;">0 / ${words.length}</span>
+                              </div>
+                              <div id="speed-score-display" style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.2em;">CORRETTE: <span style="color: #10b981; font-size: 1.8rem; margin-left: 0.5rem;">0</span></div>
+                          </div>
+                          <button id="speed-skip-btn" style="margin-top: 4rem; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); font-family: var(--font-ui); font-size: 1.1rem; font-weight: 800; padding: 1.2rem 3rem; border-radius: 1.5rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.15em; transition: all 0.3s;">Saltear palabra ⏭</button>
                       </div>
                       <div id="speed-end-screen" style="display: none; text-align: center;">
                           <div style="font-family: var(--font-heading); font-size: 4rem; color: white; margin-bottom: 1rem;">Tempo Esaurito!</div>
@@ -1268,6 +1275,7 @@ export const TaskModal = (onComplete) => {
             const finalScoreDisplay = modal.querySelector('#speed-final-score');
             const timerDisplay = modal.querySelector('#speed-timer');
             const progressBar = modal.querySelector('#speed-progress');
+            const speedCountDisplay = modal.querySelector('#speed-count-num');
             
             let words = JSON.parse(JSON.stringify(task.content?.words || []));
             let dir = task.content?.direction || 'it-es';
@@ -1275,15 +1283,22 @@ export const TaskModal = (onComplete) => {
             let timeLeft = 60;
             let currentWordObj = null;
             let completedIndices = [];
+            let skippedIndices = [];
             
             const clean = (str) => String(str || "").toLowerCase().trim().replace(/[.,!?;]/g, '');
+            
+            const updateCountDisplay = () => {
+                if (speedCountDisplay) {
+                    speedCountDisplay.innerText = `${completedIndices.length + skippedIndices.length} / ${words.length}`;
+                }
+            };
 
             const nextWord = () => {
-                const available = words.map((w, i) => i).filter(i => !completedIndices.includes(i));
+                const available = words.map((w, i) => i).filter(i => !completedIndices.includes(i) && !skippedIndices.includes(i));
                 
                 if (available.length === 0) {
-                    // All words done!
-                    endGame(true);
+                    // All words done (either completed or skipped)
+                    endGame(skippedIndices.length === 0);
                     return;
                 }
                 
@@ -1301,6 +1316,7 @@ export const TaskModal = (onComplete) => {
                 }, 150);
                 
                 inputMask.value = '';
+                updateCountDisplay();
             };
 
             const endGame = (isPerfect = false) => {
@@ -1311,8 +1327,8 @@ export const TaskModal = (onComplete) => {
                 inputMask.blur();
                 
                 gameScreen.dataset.completed = "true";
-                // Store detailed data for the professor: { score, completedIndices }
-                gameScreen.dataset.score = JSON.stringify({ score, completedIndices });
+                // Store detailed data for the professor: { score, completedIndices, skippedIndices }
+                gameScreen.dataset.score = JSON.stringify({ score, completedIndices, skippedIndices });
 
                 if (isPerfect) {
                     const perfectMsg = modal.querySelector('#speed-perfect-msg');
@@ -1344,6 +1360,26 @@ export const TaskModal = (onComplete) => {
                 }, 1000);
             };
 
+            const skipBtn = modal.querySelector('#speed-skip-btn');
+            if (skipBtn) {
+                skipBtn.onmouseenter = () => { skipBtn.style.background = 'rgba(255,255,255,0.05)'; skipBtn.style.color = 'white'; };
+                skipBtn.onmouseleave = () => { skipBtn.style.background = 'transparent'; skipBtn.style.color = 'rgba(255,255,255,0.4)'; };
+                skipBtn.onclick = () => {
+                    if (isProcessingWord) return;
+                    if (currentWordObj) {
+                        skippedIndices.push(currentWordObj._idx);
+                    }
+                    
+                    wordDisplay.style.transform = 'scale(0.85)';
+                    wordDisplay.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        updateCountDisplay();
+                        nextWord();
+                    }, 100);
+                };
+            }
+
             let isProcessingWord = false;
             
             inputMask.addEventListener('input', (e) => {
@@ -1358,6 +1394,7 @@ export const TaskModal = (onComplete) => {
                     if (!completedIndices.includes(currentWordObj._idx)) {
                         completedIndices.push(currentWordObj._idx);
                     }
+                    updateCountDisplay();
                     scoreDisplay.innerText = score;
                     inputMask.style.borderColor = '#10b981';
                     inputMask.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';

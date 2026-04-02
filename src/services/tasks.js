@@ -73,6 +73,8 @@ export const getTeacherTasks = async () => {
                 *,
                 task_assignments (
                     id,
+                    student_id,
+                    profiles (name, avatar_url),
                     submissions (
                         id,
                         answers,

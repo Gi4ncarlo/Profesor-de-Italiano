@@ -114,15 +114,24 @@
 
 /* Quote */
 .luciana-quote {
-  background: var(--color-parchment); padding: 2.5rem;
-  border-radius: 2rem; width: 100%;
-  border-left: 5px solid var(--color-oliva);
-  box-shadow: 6px 6px 24px rgba(0,0,0,0.02);
+  background: var(--color-parchment); padding: 3rem;
+  border-radius: 2.22rem; width: 100%;
+  border-left: 6px solid var(--color-oliva);
+  box-shadow: 4px 4px 20px rgba(0,0,0,0.02);
 }
 .luciana-quote p {
-  font-family: var(--font-handwritten); font-size: 1.8rem;
-  color: var(--color-oliva); line-height: 1.35; margin: 0;
+  font-family: var(--font-heading); 
+  font-size: 2.2rem;
+  color: var(--color-oliva); 
+  line-height: 1.45; 
+  margin: 0;
   font-style: italic;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .luciana-quote { padding: 2rem; }
+  .luciana-quote p { font-size: 1.85rem; }
 }
 
 /* Lucky 4 decorative */
