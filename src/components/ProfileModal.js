@@ -12,9 +12,10 @@ export const ProfileModal = (user, onUpdate) => {
     const render = () => {
         overlay.innerHTML = `
             <div class="modal-content profile-modal-content" style="
-                width: 60rem; max-width: 90vw; background: #fff; border-radius: 4rem; 
+                width: 60rem; max-width: 94vw; max-height: 92vh; background: #fff; border-radius: 4rem; 
                 padding: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.18); 
-                overflow: hidden; border: 1px solid rgba(255,255,255,0.2);
+                overflow-y: auto; border: 1px solid rgba(255,255,255,0.2);
+                -webkit-overflow-scrolling: touch;
             ">
                 <!-- Cover Area -->
                 <div style="height: 22rem; background: url('/assets/roses.png') center/cover no-repeat; position: relative;">
@@ -22,7 +23,7 @@ export const ProfileModal = (user, onUpdate) => {
                 </div>
 
                 <!-- Avatar with Overlap -->
-                <div style="position: relative; margin-top: -10rem; display: flex; flex-direction: column; align-items: center; padding: 0 6rem 6rem;">
+                <div style="position: relative; margin-top: -10rem; display: flex; flex-direction: column; align-items: center; padding: 0 4rem 6rem;">
                     <div id="p-avatar-container" style="
                         width: 18rem; height: 18rem; border-radius: 50%; 
                         background: white; border: 4px solid white; 
@@ -31,6 +32,7 @@ export const ProfileModal = (user, onUpdate) => {
                     ">
                         ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:4rem; background:#f9f9f9; color:#ccc;">👤</div>`}
                         <div id="p-avatar-hover" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(107, 16, 36, 0.6); opacity:0; display:flex; align-items:center; justify-content:center; color:white; font-family:var(--font-ui); font-size:1rem; font-weight:950; text-transform:uppercase; letter-spacing:0.2em; transition:0.3s; backdrop-filter: blur(4px);">Cambia Foto</div>
+                        <div id="p-avatar-loader" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); display:none; align-items:center; justify-content:center; font-size:0.8rem; color:var(--color-ink); font-weight:900;">ATTENDI...</div>
                     </div>
                     <input type="file" id="p-avatar-input" accept="image/png, image/jpeg, image/jpg" style="display: none;">
 
@@ -60,12 +62,13 @@ export const ProfileModal = (user, onUpdate) => {
                             </div>
                         </div>
 
-                        <div style="display: flex; gap: 2rem; margin-top: 6rem; justify-content: center;">
+                        <div style="display: flex; gap: 2rem; margin-top: 6rem; justify-content: center; flex-wrap: wrap;">
                             <button id="p-close" style="
                                 background: #f5f5f5; border: 1.5px solid rgba(0,0,0,0.03); 
                                 cursor:pointer; font-family: var(--font-body); font-size: 1.15rem; 
                                 font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; 
                                 opacity: 0.6; transition: all 0.3s; padding: 1.8rem 5rem; border-radius: 20px;
+                                min-width: 20rem;
                             ">Chiudi</button>
                             <button class="btn-primary" id="p-save" style="
                                 background: var(--color-ink); color: white; border: none; 
@@ -73,6 +76,7 @@ export const ProfileModal = (user, onUpdate) => {
                                 font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; 
                                 padding: 1.8rem 6.5rem; border-radius: 50px; 
                                 box-shadow: 0 10px 30px rgba(0,0,0,0.15); transition: all 0.3s;
+                                min-width: 24rem;
                             ">
                                 Salva Modifiche
                             </button>
@@ -85,6 +89,7 @@ export const ProfileModal = (user, onUpdate) => {
         const avatarContainer = overlay.querySelector('#p-avatar-container');
         const avatarInput = overlay.querySelector('#p-avatar-input');
         const avatarHover = overlay.querySelector('#p-avatar-hover');
+        const avatarLoader = overlay.querySelector('#p-avatar-loader');
         let currentAvatar = user.avatar_url;
 
         avatarContainer.onmouseover = () => avatarHover.style.opacity = '1';
@@ -94,24 +99,65 @@ export const ProfileModal = (user, onUpdate) => {
         avatarInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 8 * 1024 * 1024) return toast.show("Il file è troppo grande (>8MB)", "error");
+            
+            // Limit to 10MB just in case, but 8MB was fine
+            if (file.size > 10 * 1024 * 1024) {
+                return toast.show("La foto è troppo pesante per l'Atelier (>10MB)", "error");
+            }
 
-            toast.show("Ottimizzazione... ✨");
+            avatarLoader.style.display = 'flex';
+            toast.show("Ottimizzazione in corso... ✨");
+            
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
+                img.onerror = () => {
+                    avatarLoader.style.display = 'none';
+                    toast.show("Errore nel caricamento dell'immagine.", "error");
+                };
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 512;
-                    canvas.height = 512;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, 512, 512);
-                    currentAvatar = canvas.toDataURL('image/webp', 0.85);
-                    const imgEl = avatarContainer.querySelector('img');
-                    if (imgEl) imgEl.src = currentAvatar;
-                    else avatarContainer.innerHTML = `<img src="${currentAvatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    try {
+                        const canvas = document.createElement('canvas');
+                        // Use a slightly smaller size for better mobile performance
+                        const size = 400; 
+                        canvas.width = size;
+                        canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Calculate crop to maintain aspect ratio
+                        const minDim = Math.min(img.width, img.height);
+                        const startX = (img.width - minDim) / 2;
+                        const startY = (img.height - minDim) / 2;
+                        
+                        ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+                        
+                        // Try webp, fallback to jpeg which is universally supported
+                        let dataUrl;
+                        try {
+                            dataUrl = canvas.toDataURL('image/webp', 0.8);
+                            if (dataUrl.length < 100) throw new Error("WebP failed");
+                        } catch (err) {
+                            dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                        }
+                        
+                        currentAvatar = dataUrl;
+                        const imgEl = avatarContainer.querySelector('img');
+                        if (imgEl) imgEl.src = currentAvatar;
+                        else avatarContainer.innerHTML = `<img src="${currentAvatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                        
+                        toast.show("Pronta! Non dimenticare di salvare. ✓");
+                    } catch (err) {
+                        console.error(err);
+                        toast.show("Errore nell'elaborazione della foto.", "error");
+                    } finally {
+                        avatarLoader.style.display = 'none';
+                    }
                 };
                 img.src = event.target.result;
+            };
+            reader.onerror = () => {
+                avatarLoader.style.display = 'none';
+                toast.show("Errore nella lettura del file.", "error");
             };
             reader.readAsDataURL(file);
         };
@@ -139,7 +185,8 @@ export const ProfileModal = (user, onUpdate) => {
                 await onUpdate(newName, currentAvatar);
                 closeBtn.click();
             } catch (err) {
-                console.error(err); toast.show("Errore nell'aggiornamento.", "error");
+                console.error(err); 
+                toast.show(err.message || "Errore nell'aggiornamento.", "error");
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = "<span>Salva Modifiche</span>";

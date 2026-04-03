@@ -146,7 +146,11 @@ export const GiancarloDashboard = (navigate, user) => {
             localStorage.setItem('luci_user', JSON.stringify(user));
             render();
             toast.show("Profilo salvato. ✓");
-        } catch (err) { console.error(err); toast.show("Errore salvataggio.", "error"); }
+        } catch (err) { 
+            console.error(err); 
+            const errorMsg = typeof err === 'string' ? err : (err.message || "Errore salvataggio.");
+            toast.show(errorMsg, "error"); 
+        }
     });
 
     const confirmModal = ConfirmModal(async (taskId) => {

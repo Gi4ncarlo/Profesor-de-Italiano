@@ -129,7 +129,11 @@ export const LucianaDashboard = (navigate, user) => {
             localStorage.setItem('luci_user', JSON.stringify(user));
             render();
             toast.show("Profilo aggiornato! ✨");
-        } catch (err) { console.error(err); toast.show("Errore profilo.", "error"); }
+        } catch (err) { 
+            console.error(err); 
+            const errorMsg = typeof err === 'string' ? err : (err.message || "Errore profilo.");
+            toast.show(errorMsg, "error"); 
+        }
     });
 
     const refresh = async () => {
