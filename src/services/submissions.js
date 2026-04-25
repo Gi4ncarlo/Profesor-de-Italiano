@@ -96,7 +96,7 @@ export const getSubmissionsByTask = async (taskId) => {
             .from('task_assignments')
             .select(`
                 id,
-                student:student_id (name),
+                student:student_id (name, avatar_url),
                 submissions (
                     id,
                     answers,

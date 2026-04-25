@@ -129,7 +129,7 @@ export const getStudentTasks = async () => {
             .select(`
                 id,
                 assigned_at,
-                tasks (*),
+                tasks (*, master:profiles!tasks_created_by_fkey (name, avatar_url)),
                 submissions (
                     id,
                     answers,

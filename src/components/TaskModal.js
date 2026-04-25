@@ -45,25 +45,39 @@ export const TaskModal = (onComplete) => {
     modal.style.scrollbarWidth = 'thin';
     modal.style.scrollbarColor = 'var(--color-bordo) transparent';
 
-    const renderHeader = (task) => `
-        <button class="modal-close" id="modal-close-btn" style="
-            position: absolute; top: 2.8rem; left: 2.8rem; 
-            width: 4.5rem; height: 4.5rem; border-radius: 50%;
-            background: rgba(0,0,0,0.03); border: 1.5px solid rgba(0,0,0,0.04);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2.4rem; cursor: pointer; transition: all 0.25s; color: var(--color-ink);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        ">×</button>
-        <div style="text-align: center; margin-bottom: 5.5rem; position: relative;">
-            <div style="font-family: var(--font-body); font-size: 1.2rem; font-weight: 800; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 2rem;">Registro d'Apprendimento</div>
-            <h2 style="font-family: var(--font-heading); font-size: clamp(3.5rem, 6vw, 4.5rem); font-weight: 700; margin: 0; color: var(--color-ink); line-height: 1; letter-spacing: -0.5px;">${task.title || 'Senza Titolo'}</h2>
-            <div style="width: 8rem; height: 1.5px; background: var(--color-bordo); margin: 3.5rem auto; opacity: 0.15;"></div>
-            <div style="font-family: var(--font-body); font-size: 1.2rem; font-weight: 800; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.2em;">A cura di ${task.master_name || 'Maestro Giancarlo'} 🎨</div>
-            <div id="autosave-status" style="font-family: var(--font-body); font-size: 1.15rem; color: #a67d32; opacity: 0.9; margin-top: 2rem; display: none;">
-                Borrador guardado <span id="save-time"></span> ✓
+    const renderHeader = (task) => {
+        const masterName = task.master?.name || task.master_name || 'Maestro Giancarlo';
+        const masterAvatar = task.master?.avatar_url || '/default-avatar.png';
+
+        return `
+            <button class="modal-close" id="modal-close-btn" style="
+                position: absolute; top: 2.8rem; left: 2.8rem; 
+                width: 4.5rem; height: 4.5rem; border-radius: 50%;
+                background: rgba(0,0,0,0.03); border: 1.5px solid rgba(0,0,0,0.04);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 2.4rem; cursor: pointer; transition: all 0.25s; color: var(--color-ink);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+                z-index: 10;
+            ">×</button>
+            <div style="text-align: center; margin-bottom: 5.5rem; position: relative;">
+                <div style="font-family: var(--font-body); font-size: 1.2rem; font-weight: 800; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.4em; margin-bottom: 2.2rem;">Registro d'Apprendimento</div>
+                <h2 style="font-family: var(--font-heading); font-size: clamp(3.5rem, 6vw, 4.5rem); font-weight: 700; margin: 0; color: var(--color-ink); line-height: 1.1; letter-spacing: -0.8px;">${task.title || 'Senza Titolo'}</h2>
+                
+                <div style="display: flex; align-items: center; justify-content: center; gap: 1.2rem; margin-top: 3.5rem;">
+                    <div style="width: 3.2rem; height: 3.2rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        <img src="${masterAvatar}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=Giancarlo'">
+                    </div>
+                    <div style="font-family: var(--font-body); font-size: 1.15rem; font-weight: 850; color: var(--color-ink); opacity: 0.75; text-transform: uppercase; letter-spacing: 0.15em;">
+                        Dottore <span style="color: var(--color-terracota);">${masterName}</span> 🎨
+                    </div>
+                </div>
+
+                <div id="autosave-status" style="font-family: var(--font-body); font-size: 1.1rem; color: #a67d32; opacity: 0.9; margin-top: 2rem; display: none; font-weight: 600;">
+                    Borrador guardado <span id="save-time"></span> ✓
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    };
 
 
     const getRawContent = (task) => {
@@ -78,6 +92,9 @@ export const TaskModal = (onComplete) => {
         const comment = task.review_comment || (task.feedback && task.feedback[0] ? task.feedback[0].comment : '');
         if (!comment) return '';
         
+        const masterName = task.master?.name || task.master_name || 'Maestro Giancarlo';
+        const masterAvatar = task.master?.avatar_url || '/default-avatar.png';
+
         return `
             <div style="margin-bottom: 6rem; animation: coutureSlideIn 0.6s ease-out forwards;">
                 <div style="font-family: var(--font-body); font-size: 1.15rem; font-weight: 900; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.2rem; color: var(--color-bordo); display: flex; align-items: center; gap: 1.5rem;">
@@ -87,7 +104,16 @@ export const TaskModal = (onComplete) => {
                 <div style="background: #fffcfb; border-radius: 2.8rem; padding: 4.5rem 5rem; box-shadow: 0 15px 40px rgba(107, 16, 36, 0.04); border: 1.5px solid rgba(107, 16, 36, 0.08); position: relative; overflow: hidden; transform: rotate(-0.5deg);">
                     <div style="position: absolute; right: 2rem; bottom: -2rem; font-size: 18rem; font-family: var(--font-heading); color: var(--color-bordo); opacity: 0.03; pointer-events: none;">"</div>
                     <div class="font-editorial" style="font-size: 3.2rem; color: #43191a; line-height: 1.45; font-weight: 400; text-shadow: 0 1px 1px rgba(0,0,0,0.01);">"${comment}"</div>
-                    <div style="text-align: right; margin-top: 2.5rem; font-family: var(--font-body); font-size: 1rem; font-weight: 800; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.18em;">— Maestro Giancarlo ✒️</div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem;">
+                        <div style="text-align: right;">
+                            <div style="font-family: var(--font-body); font-size: 0.95rem; font-weight: 950; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.15em;">${masterName}</div>
+                            <div style="font-family: var(--font-body); font-size: 0.8rem; font-weight: 800; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.1em;">Il tuo Maestro ✒️</div>
+                        </div>
+                        <div style="width: 3.8rem; height: 3.8rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <img src="${masterAvatar}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=Giancarlo'">
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -166,21 +192,37 @@ export const TaskModal = (onComplete) => {
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 2.5rem;">
                         ${c.sentences.map((it, idx) => {
-                            // GiancarloDashboard saves the actual original text and the 'blank' word.
-                            // We need to replace that word in the text with an input.
                             const originalText = it.text || "";
                             const blank = it.blank || "";
+                            const studentAns = (answers[idx] || "").trim();
+                            const isCorrect = studentAns.toLowerCase() === (blank || "").toLowerCase();
                             
                             let sentenceHtml = originalText;
                             if (blank) {
                                 const reg = new RegExp(`\\b${blank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-                                const match = originalText.match(reg);
-                                if (match) {
-                                    const inputHtml = `<input type="text" class="task-input" data-idx="${idx}" style="width: 20rem; font-size: 2.2rem; color: ${answerColor}; font-weight: 700; border: none; border-bottom: 2.5px solid ${isReadOnly ? '#e6eef8' : 'rgba(166, 77, 50, 0.4)'}; background: transparent; margin: 0 1rem; border-radius: 0.6rem; padding: 0.2rem 1rem; transition: all 0.3s;" placeholder="..." value="${answers[idx] || ''}" ${isReadOnly ? 'readonly' : ''}>`;
-                                    sentenceHtml = originalText.replace(reg, inputHtml);
+                                
+                                let inputStyle = `width: 20rem; font-size: 2.2rem; font-weight: 700; border: none; background: transparent; margin: 0 1rem; border-radius: 0.6rem; padding: 0.2rem 1rem; transition: all 0.3s;`;
+                                
+                                if (isReadOnly) {
+                                    const color = isCorrect ? '#059669' : '#e11d48';
+                                    const border = isCorrect ? 'none' : `2px solid ${color}`;
+                                    const decoration = isCorrect ? 'none' : 'line-through';
+                                    
+                                    const resultHtml = `
+                                        <span style="position: relative; display: inline-block;">
+                                            <span style="color: ${color}; font-weight: 800; text-decoration: ${decoration}; font-size: 2.2rem; margin: 0 0.5rem;">${studentAns || '...'}</span>
+                                            ${!isCorrect ? `
+                                                <div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.5rem 1.2rem; border-radius: 0.8rem; font-size: 1.4rem; white-space: nowrap; margin-bottom: 1rem; font-family: var(--font-body); box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 10;">
+                                                    <span style="opacity: 0.6; font-size: 1rem; display: block; text-transform: uppercase; font-family: var(--font-ui); font-weight: 950; letter-spacing: 0.1em; margin-bottom: 0.2rem;">SOLUZIONE</span>
+                                                    ${blank}
+                                                </div>
+                                            ` : ''}
+                                        </span>
+                                    `;
+                                    sentenceHtml = originalText.replace(reg, resultHtml);
                                 } else {
-                                    // Fallback if regex fails (e.g. word not found due to punctuation)
-                                    sentenceHtml = originalText.replace(blank, `<input type="text" class="task-input" data-idx="${idx}" style="width: 20rem; font-size: 2.2rem; color: ${answerColor}; font-weight: 700; border: none; border-bottom: 2.5px solid ${isReadOnly ? '#e6eef8' : 'rgba(166, 77, 50, 0.4)'}; background: transparent; margin: 0 1rem; border-radius: 0.6rem; padding: 0.2rem 1rem; transition: all 0.3s;" placeholder="..." value="${answers[idx] || ''}" ${isReadOnly ? 'readonly' : ''}>`);
+                                    const inputHtml = `<input type="text" class="task-input" data-idx="${idx}" style="${inputStyle} color: ${answerColor}; border-bottom: 2.5px solid rgba(166, 77, 50, 0.4);" placeholder="..." value="${studentAns}">`;
+                                    sentenceHtml = originalText.replace(reg, inputHtml);
                                 }
                             }
 
@@ -791,7 +833,7 @@ export const TaskModal = (onComplete) => {
 
     const renderSpeedContent = (task) => {
         const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
-        let savedData = { score: 0, completedIndices: [] };
+        let savedData = { score: 0, completedIndices: [], skippedIndices: [] };
         try {
             const src = task.student_answer || task.answers;
             if (typeof src === 'string' && src.startsWith('{')) {
@@ -799,14 +841,15 @@ export const TaskModal = (onComplete) => {
             } else if (typeof src === 'object' && src !== null) {
                 savedData = src;
             } else {
-                savedData = { score: Number(src) || 0, completedIndices: [] };
+                savedData = { score: Number(src) || 0, completedIndices: [], skippedIndices: [] };
             }
         } catch(e) {
-            savedData = { score: 0, completedIndices: [] };
+            savedData = { score: 0, completedIndices: [], skippedIndices: [] };
         }
 
         const words = task.content?.words || [];
         const completedIndices = Array.isArray(savedData.completedIndices) ? savedData.completedIndices.map(Number) : [];
+        const skippedIndices = Array.isArray(savedData.skippedIndices) ? savedData.skippedIndices.map(Number) : [];
         const score = savedData.score || completedIndices.length;
 
         return `
@@ -826,11 +869,26 @@ export const TaskModal = (onComplete) => {
                       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem;">
                         ${words.map((w, i) => {
                             const isDone = completedIndices.includes(Number(i));
-                            const color = isDone ? '#10b981' : '#ef4444';
-                            const bgColor = isDone ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                            const isSkipped = skippedIndices.includes(Number(i));
+                            
+                            let color = '#ef4444'; // Red for timeout
+                            let bgColor = 'rgba(239, 68, 68, 0.1)';
+                            let label = 'NON RAGGIUNTA';
+                            
+                            if (isDone) {
+                                color = '#10b981'; // Green for correct
+                                bgColor = 'rgba(16, 185, 129, 0.1)';
+                                label = 'CORRETTA';
+                            } else if (isSkipped) {
+                                color = '#f59e0b'; // Orange for skipped
+                                bgColor = 'rgba(245, 158, 11, 0.1)';
+                                label = 'SALTEATA ⏭';
+                            }
+                            
                             return `
-                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.5rem; text-align: center;">
-                                    <div style="font-family: var(--font-body); font-size: 1.2rem; color: white; font-weight: 600; opacity: 0.9;">${task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
+                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.5rem; text-align: center; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; right: 0; padding: 0.3rem 0.6rem; background: ${color}22; color: ${color}; font-family: var(--font-ui); font-size: 0.55rem; font-weight: 950; border-bottom-left-radius: 8px;">${label}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.2rem; color: white; font-weight: 600; opacity: 0.9; margin-top: 0.4rem;">${task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
                                     <div style="height: 1px; background: white; opacity: 0.1; margin: 0.3rem 0;"></div>
                                     <div style="font-family: var(--font-body); font-size: 1.2rem; color: ${color}; font-weight: 800;">${task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
                                 </div>

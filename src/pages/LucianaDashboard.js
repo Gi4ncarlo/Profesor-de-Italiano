@@ -284,15 +284,33 @@ export const LucianaDashboard = (navigate, user) => {
                 let sClass = 'luciana-badge--pending', sText = 'Pendente';
                 if (a.status === 'submitted') { sClass = 'luciana-badge--submitted'; sText = 'Consegnato'; }
                 if (a.status === 'reviewed') { sClass = 'luciana-badge--reviewed'; sText = 'Visto'; }
+
+                const teacher = a.master || {};
+                const teacherName = teacher.name || 'Giancarlo';
+                const teacherAvatar = teacher.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${teacherName}`;
+
                 card.innerHTML = `
-                    <div style="flex: 1;">
-                        <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.8rem;">
-                            <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.65; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink);">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
-                            <span class="luciana-badge ${sClass}" style="font-weight: 950; letter-spacing: 0.1em;">${sText}</span>
+                    <div style="display: flex; align-items: flex-start; gap: 2.2rem; width: 100%;">
+                        <!-- Teacher Profile -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; min-width: 80px;">
+                            <div style="position: relative;">
+                                <img src="${teacherAvatar}" 
+                                     style="width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover; border: 2.5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.12); background: var(--color-crema);" 
+                                     alt="${teacherName}">
+                                <div style="position: absolute; bottom: 0; right: 0; width: 1.8rem; height: 1.8rem; background: var(--color-olive); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">✒️</div>
+                            </div>
+                            <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 800; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">${teacherName}</span>
                         </div>
-                        <h4 style="font-family: var(--font-titles); font-size: 1.85rem; margin: 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
+
+                        <div style="flex: 1;">
+                            <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.8rem;">
+                                <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.65; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink);">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
+                                <span class="luciana-badge ${sClass}" style="font-weight: 950; letter-spacing: 0.1em;">${sText}</span>
+                            </div>
+                            <h4 style="font-family: var(--font-titles); font-size: 1.85rem; margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
+                            <div style="font-family: var(--font-ui); font-size: 1.15rem; opacity: 0.5; font-weight: 800; color: var(--color-ink);">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
+                        </div>
                     </div>
-                    <div style="font-family: var(--font-ui); font-size: 1.25rem; opacity: 0.65; font-weight: 850; color: var(--color-ink);">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
                 `;
                 card.onclick = () => taskModal.open(a);
                 tList.appendChild(card);

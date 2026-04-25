@@ -267,55 +267,111 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 3. COMPLETAR / FILL CHOICE (SCELTA MULTIPLA)
+        // 3. FILL IN THE BLANKS (COMPLETARE)
         if (type === 'fill' || type === 'completare' || (task.content?.text && (task.content.text.includes('___') || task.content.text.includes('---')))) {
-            const segments = (task.content?.text || "").split(/_{2,}|-{2,}|\.{3,}/);
-            const gaps = task.content?.gaps || [];
-            let h = `<div style="line-height: 5.5; text-align: center; font-family: var(--font-body); font-size: 2.6rem; color: var(--color-ink); padding: 4rem 3rem 8rem 3rem; background: #fffdf9; border-radius: 2.5rem; border: 1.5px solid rgba(0,0,0,0.03);">`;
-            segments.forEach((p, i) => {
-                h += `<span>${p}</span>`;
-                if (i < segments.length - 1) {
-                    const studentVal = Array.isArray(answers) ? (answers[i] || '...') : '...';
+            let html = `<div style="display: flex; flex-direction: column; gap: 2.5rem;">`;
+            const clean = (s) => (s || "").toLowerCase().replace(/[.,!?;:]/g, '').trim();
+
+            const renderGap = (studentVal, correctVal) => {
+                const isCorrect = correctVal && clean(studentVal) === clean(correctVal);
+                return `
+                    <span style="display: inline-block; position: relative; margin: 0 0.5rem; vertical-align: middle;">
+                        <span style="
+                            display: flex; align-items: center; justify-content: center;
+                            min-width: 12rem; padding: 0.6rem 1.5rem; border-radius: 1.2rem;
+                            color: ${isCorrect ? '#065f46' : '#991b1b'};
+                            background: ${isCorrect ? '#ecfdf5' : '#fef2f2'};
+                            border: 2px solid ${isCorrect ? '#10b981' : '#ef4444'};
+                            font-weight: 700; font-family: var(--font-body); font-size: 1.8rem;
+                            line-height: 1.2;
+                        ">${studentVal || '...'}</span>
+                        ${!isCorrect && correctVal ? `
+                            <div style="
+                                position: absolute; top: calc(100% + 0.6rem); left: 50%; transform: translateX(-50%);
+                                background: #f0fdf4; border: 2px solid #10b981; padding: 0.4rem 0.8rem; border-radius: 1rem;
+                                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12); z-index: 5;
+                                white-space: nowrap; display: flex; flex-direction: column; align-items: center;
+                            ">
+                                <div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; background: #f0fdf4; border-left: 2px solid #10b981; border-top: 2px solid #10b981; rotate: 45deg;"></div>
+                                <span style="font-family: var(--font-ui); font-size: 0.55rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.1em;">SOLUZIONE</span>
+                                <span style="font-family: var(--font-body); font-size: 1.4rem; color: #064e3b; font-weight: 800;">${correctVal}</span>
+                            </div>
+                        ` : ''}
+                    </span>
+                `;
+            };
+
+            // Variant A: c.sentences (Specific sentences from creator)
+            if (c.sentences && Array.isArray(c.sentences)) {
+                c.sentences.forEach((it, idx) => {
+                    const originalText = it.text || "";
+                    const blank = it.blank || "";
+                    const studentVal = Array.isArray(answers) ? (answers[idx] || '') : '';
                     
-                    let gapCorrect = '';
-                    if (gaps[i]) {
-                        gapCorrect = typeof gaps[i] === 'object' ? (gaps[i].correct || '') : gaps[i];
+                    let sentenceHtml = originalText;
+                    if (blank) {
+                        const reg = new RegExp(`\\b${blank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                        const match = originalText.match(reg);
+                        if (match) {
+                            const gapHtml = renderGap(studentVal, blank);
+                            sentenceHtml = originalText.replace(reg, gapHtml);
+                        }
                     }
-                    const correctVal = (gapCorrect || (task.content.answers ? task.content.answers[i] : null) || '').trim();
-                    
-                    const clean = (s) => (s || "").toLowerCase().replace(/[.,!?;:]/g, '').trim();
-                    const isCorrect = correctVal && clean(studentVal) === clean(correctVal);
-                    
-                    h += `
-                        <span style="display: inline-block; position: relative; margin: 0 1rem; vertical-align: middle;">
-                            <span style="
-                                display: flex; align-items: center; justify-content: center;
-                                min-width: 20rem; padding: 0.8rem 1.8rem; border-radius: 1.5rem;
-                                color: ${isCorrect ? '#065f46' : '#991b1b'};
-                                background: ${isCorrect ? '#ecfdf5' : '#fef2f2'};
-                                border: 2.5px solid ${isCorrect ? '#10b981' : '#ef4444'};
-                                box-shadow: 0 4px 12px ${isCorrect ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'};
-                                font-weight: 700; font-family: var(--font-body); font-size: 2.4rem;
-                                line-height: 1.2;
-                            ">${studentVal}</span>
-                            ${!isCorrect && correctVal ? `
-                                <div style="
-                                    position: absolute; top: calc(100% + 0.8rem); left: -2.5px; right: -2.5px;
-                                    background: #f0fdf4; border: 2.5px solid #10b981; padding: 0.6rem 0.8rem; border-radius: 1.5rem;
-                                    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); z-index: 5;
-                                    display: flex; flex-direction: column; align-items: center; justify-content: center;
-                                    line-height: 1.2;
-                                ">
-                                    <div style="position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; background: #f0fdf4; border-left: 2.5px solid #10b981; border-top: 2.5px solid #10b981; rotate: 45deg;"></div>
-                                    <span style="font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950; color: #059669; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.8; margin-bottom: 0.2rem;">Corretta</span>
-                                    <span style="font-family: var(--font-body); font-size: 2rem; color: #064e3b; font-weight: 800; letter-spacing: -0.02em;">${correctVal}</span>
-                                </div>
-                            ` : ''}
-                        </span>
+
+                    html += `
+                        <div style="background: white; border-radius: 2rem; padding: 3rem 4rem; border: 1.5px solid rgba(0,0,0,0.03); box-shadow: 0 8px 30px rgba(0,0,0,0.01);">
+                            <div style="font-family: var(--font-body); font-size: 2.2rem; line-height: 2.5; color: var(--color-ink);">
+                                ${sentenceHtml}
+                            </div>
+                        </div>
                     `;
-                }
-            });
-            h += `</div>`;
-            return h;
+                });
+            } 
+            // Variant B: c.items (List of objects with underscores)
+            else if (c.items && Array.isArray(c.items)) {
+                c.items.forEach((it, idx) => {
+                    const segments = (it.italiano || "").split(/_{2,}|-{2,}|\.{3,}/);
+                    const studentVal = Array.isArray(answers) ? (answers[idx] || '') : '';
+                    const correctVal = it.blank || (task.content.answers ? task.content.answers[idx] : '');
+
+                    html += `
+                        <div style="background: white; border-radius: 2rem; padding: 3rem 4rem; border: 1.5px solid rgba(0,0,0,0.03); box-shadow: 0 8px 30px rgba(0,0,0,0.01);">
+                            <div style="font-family: var(--font-body); font-size: 2.2rem; line-height: 2.5; color: var(--color-ink);">
+                                ${segments.map((seg, sIdx) => sIdx < segments.length - 1 
+                                    ? `${seg}${renderGap(studentVal, correctVal)}`
+                                    : seg).join('')}
+                            </div>
+                            ${it.español ? `<div style="font-family: var(--font-body); font-size: 1.2rem; color: var(--color-ink); opacity: 0.3; margin-top: 1rem; font-style: italic;">💡 ${it.español}</div>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            // Variant C: Global text block with underscores
+            else {
+                const text = task.content?.text || "";
+                const segments = text.split(/_{2,}|-{2,}|\.{3,}/);
+                const gaps = task.content?.gaps || [];
+                
+                html += `
+                    <div style="background: #fffdf9; border-radius: 2.5rem; padding: 4rem; border: 1.5px solid rgba(0,0,0,0.03); font-family: var(--font-body); font-size: 2.4rem; line-height: 2.8; color: var(--color-ink); text-align: center;">
+                        ${segments.map((p, i) => {
+                            if (i < segments.length - 1) {
+                                const studentVal = Array.isArray(answers) ? (answers[i] || '') : '';
+                                let gapCorrect = '';
+                                if (gaps[i]) {
+                                    gapCorrect = typeof gaps[i] === 'object' ? (gaps[i].correct || '') : gaps[i];
+                                }
+                                const correctVal = (gapCorrect || (task.content.answers ? task.content.answers[i] : '')).trim();
+                                return `${p}${renderGap(studentVal, correctVal)}`;
+                            }
+                            return p;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            return html;
         }
 
         // 4. ORDER SENTENCE
@@ -446,7 +502,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
         // 7. SPEED (VELOCITY)
         if (type === 'speed' || c.type === 'speed') {
-            let data = { score: 0, completedIndices: [] };
+            let data = { score: 0, completedIndices: [], skippedIndices: [] };
             try {
                 const src = answers?.data || answers;
                 if (typeof src === 'string' && src.startsWith('{')) {
@@ -454,14 +510,15 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 } else if (typeof src === 'object' && src !== null) {
                     data = src;
                 } else {
-                    data = { score: Number(src) || 0, completedIndices: [] };
+                    data = { score: Number(src) || 0, completedIndices: [], skippedIndices: [] };
                 }
             } catch(e) {
-                data = { score: Number(answers) || 0, completedIndices: [] };
+                data = { score: Number(answers) || 0, completedIndices: [], skippedIndices: [] };
             }
             
             const words = c.words || [];
             const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
+            const skippedIndices = Array.isArray(data.skippedIndices) ? data.skippedIndices.map(Number) : [];
             const score = data.score || completedIndices.length;
             const isPerfect = completedIndices.length === words.length && words.length > 0;
 
@@ -484,11 +541,26 @@ export const TaskDetailsPage = (navigate, user, params) => {
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem;">
                         ${words.map((w, i) => {
                             const isDone = completedIndices.includes(Number(i));
-                            const color = isDone ? '#10b981' : '#ef4444';
-                            const bgColor = isDone ? '#f0fdf4' : '#fff1f2';
+                            const isSkipped = skippedIndices.includes(Number(i));
+                            
+                            let color = '#ef4444'; // Red for timeout
+                            let bgColor = '#fff1f2';
+                            let label = 'NON RAGGIUNTA';
+                            
+                            if (isDone) {
+                                color = '#10b981'; // Green for correct
+                                bgColor = '#f0fdf4';
+                                label = 'CORRETTA';
+                            } else if (isSkipped) {
+                                color = '#f59e0b'; // Orange for skipped
+                                bgColor = '#fffbeb';
+                                label = 'SALTEATA ⏭';
+                            }
+                            
                             return `
-                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1px solid ${color}33; display: flex; flex-direction: column; gap: 0.4rem;">
-                                    <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.4; text-transform: uppercase;">${task.content.direction === 'it-es' ? 'Italiano' : 'Spagnolo'}</div>
+                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.4rem; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; right: 0; padding: 0.4rem 0.8rem; background: ${color}22; color: ${color}; font-family: var(--font-ui); font-size: 0.6rem; font-weight: 950; border-bottom-left-radius: 8px;">${label}</div>
+                                    <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.4; text-transform: uppercase; margin-top: 0.5rem;">${task.content.direction === 'it-es' ? 'Italiano' : 'Spagnolo'}</div>
                                     <div style="font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink); font-weight: 600;">${task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
                                     <div style="height: 1px; background: ${color}22; margin: 0.4rem 0;"></div>
                                     <div style="font-family: var(--font-body); font-size: 1.4rem; color: ${color}; font-weight: 800;">${task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
@@ -652,7 +724,9 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 subCard.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; gap: 1.8rem; align-items: center;">
-                            <div style="width: 55px; height: 55px; border-radius: 12px; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: #92400e;">${studentName.charAt(0)}</div>
+                            <div style="width: 55px; height: 55px; border-radius: 12px; background: #fef3c7; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: #92400e; border: 1.5px solid rgba(146, 64, 14, 0.1);">
+                                ${sub.profiles?.avatar_url ? `<img src="${sub.profiles.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : studentName.charAt(0)}
+                            </div>
                             <div>
                                 <div style="font-family: var(--font-titles); font-size: 2.2rem; color: var(--color-ink);">${studentName}</div>
                                 <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Status: Pendente 🪶</div>
@@ -665,7 +739,9 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 subCard.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 3.5rem;">
                         <div style="display: flex; gap: 1.8rem; align-items: center;">
-                            <div style="width: 55px; height: 55px; border-radius: 12px; background: var(--color-crema-oscuro); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-terracota);">${studentName.charAt(0)}</div>
+                            <div style="width: 55px; height: 55px; border-radius: 12px; background: var(--color-crema-oscuro); overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-terracota); border: 1.5px solid rgba(166, 77, 50, 0.1);">
+                                ${sub.profiles?.avatar_url ? `<img src="${sub.profiles.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : studentName.charAt(0)}
+                            </div>
                             <div>
                                 <div style="font-family: var(--font-titles); font-size: 2.2rem; color: var(--color-ink);">${studentName}</div>
                                 <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Consegnato il: ${new Date(sub.created_at).toLocaleString('it-IT')}</div>

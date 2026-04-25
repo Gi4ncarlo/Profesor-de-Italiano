@@ -822,17 +822,30 @@ export const GiancarloDashboard = (navigate, user) => {
                     if (task.computedStatus === 'TO REVIEW') { sText = 'DA CORREGGERE ✒️'; sColor = 'white'; bColor = 'var(--color-terracota)'; showDot = true; }
                     else if (task.computedStatus === 'COMPLETED') { sText = 'COMPLETATO ✓'; sColor = '#065f46'; bColor = '#ecfdf5'; }
                     
+                    const studentProfile = task.task_assignments?.[0]?.profiles || {};
+                    const sName = studentProfile.name || '---';
+                    const sAvatar = studentProfile.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${sName}`;
+
                     card.innerHTML = `
-                        <div style="flex:1; display:flex; align-items:center; gap:2.5rem;">
+                        <div style="flex:1; display:flex; align-items:center; gap:2rem;">
                             ${showDot ? '<div class="notif-dot"></div>' : '<div style="width:0.9rem;"></div>'}
+                            
+                            <!-- Student Avatar -->
+                            <div style="position: relative; flex-shrink: 0;">
+                                <img src="${sAvatar}" 
+                                     style="width: 4rem; height: 4rem; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #f0f0f0;" 
+                                     alt="${sName}">
+                                ${task.computedStatus === 'TO REVIEW' ? `<div style="position: absolute; top: -2px; right: -2px; width: 1.4rem; height: 1.4rem; background: var(--color-terracota); border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.1);"></div>` : ''}
+                            </div>
+
                             <div>
-                                <div style="display:flex; gap:1.2rem; align-items:center; margin-bottom:0.8rem;">
-                                    <span style="font-family:var(--font-ui); font-size:1.15rem; font-weight:950; opacity:0.65; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-ink);">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
-                                    <span style="background:${bColor}; color:${sColor}; padding:0.4rem 1.4rem; border-radius:0.8rem; font-family:var(--font-ui); font-size:1.1rem; font-weight:950; text-transform:uppercase; letter-spacing:0.08em; border:1px solid rgba(0,0,0,0.05);">${sText}</span>
+                                <div style="display:flex; gap:1.2rem; align-items:center; margin-bottom:0.6rem;">
+                                    <span style="font-family:var(--font-ui); font-size:1.05rem; font-weight:950; opacity:0.45; letter-spacing:0.15em; text-transform:uppercase; color:var(--color-ink);">${TYPE_TRANSLATIONS[lowerType] || task.type}</span>
+                                    <span style="background:${bColor}; color:${sColor}; padding:0.3rem 1.2rem; border-radius:0.8rem; font-family:var(--font-ui); font-size:0.95rem; font-weight:950; text-transform:uppercase; letter-spacing:0.05em; border:1px solid rgba(0,0,0,0.03);">${sText}</span>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem;">
-                                    <h5 style="font-family:var(--font-titles); font-size:1.6rem; margin:0; color:var(--color-ink); font-weight:500;">${task.title}</h5>
-                                    <span class="student-tag">👤 ${task.task_assignments?.[0]?.profiles?.name || '---'}</span>
+                                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.3rem;">
+                                    <h5 style="font-family:var(--font-titles); font-size:1.55rem; margin:0; color:var(--color-ink); font-weight:500; line-height: 1.2;">${task.title}</h5>
+                                    <span class="student-tag" style="padding: 0.3rem 0.8rem; background: rgba(0,0,0,0.03); border-radius: 0.6rem; font-size: 1rem; font-weight: 800; color: var(--color-ink); opacity: 0.6;">${sName}</span>
                                 </div>
                             </div>
                         </div>
