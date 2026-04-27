@@ -64,8 +64,8 @@ export const TaskModal = (onComplete) => {
                 <h2 style="font-family: var(--font-heading); font-size: clamp(3.5rem, 6vw, 4.5rem); font-weight: 700; margin: 0; color: var(--color-ink); line-height: 1.1; letter-spacing: -0.8px;">${task.title || 'Senza Titolo'}</h2>
                 
                 <div style="display: flex; align-items: center; justify-content: center; gap: 1.2rem; margin-top: 3.5rem;">
-                    <div style="width: 3.2rem; height: 3.2rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                        <img src="${masterAvatar}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=Giancarlo'">
+                    <div style="width: 3.2rem; height: 3.2rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.4rem; color: var(--color-ink); font-weight: 700;">
+                        ${task.master?.avatar_url ? `<img src="${task.master.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : masterName.charAt(0)}
                     </div>
                     <div style="font-family: var(--font-body); font-size: 1.15rem; font-weight: 850; color: var(--color-ink); opacity: 0.75; text-transform: uppercase; letter-spacing: 0.15em;">
                         Dottore <span style="color: var(--color-terracota);">${masterName}</span> 🎨
@@ -110,8 +110,8 @@ export const TaskModal = (onComplete) => {
                             <div style="font-family: var(--font-body); font-size: 0.95rem; font-weight: 950; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.15em;">${masterName}</div>
                             <div style="font-family: var(--font-body); font-size: 0.8rem; font-weight: 800; opacity: 0.3; text-transform: uppercase; letter-spacing: 0.1em;">Il tuo Maestro ✒️</div>
                         </div>
-                        <div style="width: 3.8rem; height: 3.8rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <img src="${masterAvatar}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=Giancarlo'">
+                        <div style="width: 3.8rem; height: 3.8rem; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--color-bordo); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; color: var(--color-ink); font-weight: 700;">
+                            ${task.master?.avatar_url ? `<img src="${task.master.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : masterName.charAt(0)}
                         </div>
                     </div>
                 </div>

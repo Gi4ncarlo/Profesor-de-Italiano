@@ -164,7 +164,9 @@ export const LucianaDashboard = (navigate, user) => {
             <div class="sidebar-profile">
                 <div class="sidebar-profile__header">
                     <div class="sidebar-profile__avatar">
-                        ${user.avatar_url ? '<img src="' + user.avatar_url + '">' : '👤'}
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.8rem; font-weight: 700; color: var(--color-ink);">
+                            ${user.avatar_url ? '<img src="' + user.avatar_url + '" style="width: 100%; height: 100%; object-fit: cover;">' : user.name.charAt(0)}
+                        </div>
                     </div>
                     <div>
                         <div class="sidebar-profile__name">${user.name}</div>
@@ -287,16 +289,16 @@ export const LucianaDashboard = (navigate, user) => {
 
                 const teacher = a.master || {};
                 const teacherName = teacher.name || 'Giancarlo';
-                const teacherAvatar = teacher.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${teacherName}`;
+                const teacherAvatar = teacher.avatar_url;
 
                 card.innerHTML = `
                     <div style="display: flex; align-items: flex-start; gap: 2.2rem; width: 100%;">
                         <!-- Teacher Profile -->
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; min-width: 80px;">
                             <div style="position: relative;">
-                                <img src="${teacherAvatar}" 
-                                     style="width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover; border: 2.5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.12); background: var(--color-crema);" 
-                                     alt="${teacherName}">
+                                <div style="width: 5rem; height: 5rem; border-radius: 50%; overflow: hidden; background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 2rem; border: 2.5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.12); color: var(--color-ink); font-weight: 700;">
+                                    ${teacherAvatar ? `<img src="${teacherAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : teacherName.charAt(0)}
+                                </div>
                                 <div style="position: absolute; bottom: 0; right: 0; width: 1.8rem; height: 1.8rem; background: var(--color-olive); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">✒️</div>
                             </div>
                             <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 800; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">${teacherName}</span>

@@ -714,7 +714,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
             const subCard = document.createElement('div');
             subCard.className = 'submission-card animate-in';
             const isReviewed = sub.status === 'reviewed' || (sub.feedback && sub.feedback.length > 0);
-            const isPending = sub.status === 'pending';
+            const isPending = sub.status === 'pending' || sub.status === 'draft';
             const studentName = sub.profiles?.name || "Luci";
 
             if (isPending) {
@@ -729,7 +729,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                             </div>
                             <div>
                                 <div style="font-family: var(--font-titles); font-size: 2.2rem; color: var(--color-ink);">${studentName}</div>
-                                <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Status: Pendente 🪶</div>
+                                <div style="font-family: var(--font-ui); font-size: 1rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 950; margin-top: 0.5rem; color: var(--color-ink);">Status: ${sub.status === 'draft' ? 'Bozza in corso 📝' : 'Pendente 🪶'}</div>
                             </div>
                         </div>
                         <div style="font-family: var(--font-ui); font-size: 0.9rem; font-weight: 900; color: #92400e; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.1em;">In attesa di Luci</div>
@@ -787,8 +787,10 @@ export const TaskDetailsPage = (navigate, user, params) => {
         });
 
         const getStatusBadge = () => {
-            if (submissions.length === 0) return `<div class="status-badge status-pending">🪶 Pendente (Assente)</div>`;
-            const hasReviewed = submissions.some(s => s.feedback && s.feedback.length > 0);
+            if (submissions.length === 0 || submissions.every(s => s.status === 'pending' || s.status === 'draft')) {
+                return `<div class="status-badge status-pending">🪶 Pendente (Assente)</div>`;
+            }
+            const hasReviewed = submissions.some(s => s.status === 'reviewed' || (s.feedback && s.feedback.length > 0));
             if (hasReviewed) return `<div class="status-badge status-reviewed">🏛️ Recensito (Sigillato)</div>`;
             return `<div class="status-badge status-submitted">📮 Consegnato (Attesa)</div>`;
         };
@@ -798,6 +800,21 @@ export const TaskDetailsPage = (navigate, user, params) => {
             // Gather items from different possible property names
             const items = c.items || c.pairs || c.words || c.data || [];
             
+            if (task.type === 'dettato' && c.mode === 'domande' && c.questions?.length) {
+                return `
+                    <div class="content-preview">
+                        <span class="ui-label" style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 1rem; color: var(--color-ink);">DOMANDE PREVISTE</span>
+                        ${c.questions.map((q, i) => `
+                            <div class="content-item" style="padding: 1.2rem 0;">
+                                <div style="font-family: var(--font-body); font-size: 1.3rem; color: var(--color-ink); line-height: 1.4;">
+                                    <span style="opacity: 0.3; margin-right: 0.8rem; font-family: var(--font-ui); font-weight: 950;">${i+1}</span> ${q}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             if (!items.length && !c.text) {
                 // If it's a dettato task, use its special properties for the summary
                 let summary = c.description || 'Nessun dettaglio aggiuntivo.';

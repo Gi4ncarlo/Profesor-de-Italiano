@@ -183,9 +183,11 @@ export const GiancarloDashboard = (navigate, user) => {
             tasks = (tasksRes.data || []).map(task => {
                 const assignments = task.task_assignments || [];
                 const submissions = assignments.flatMap(a => a.submissions || []);
+                const activeSubs = submissions.filter(s => s.status !== 'draft');
+                
                 let computedStatus = 'PENDING';
-                if (submissions.length > 0) {
-                    const hasFeedback = submissions.some(s => s.feedback && s.feedback.length > 0);
+                if (activeSubs.length > 0) {
+                    const hasFeedback = activeSubs.some(s => s.feedback && s.feedback.length > 0);
                     computedStatus = hasFeedback ? 'COMPLETED' : 'TO REVIEW';
                 }
                 return { ...task, computedStatus };
@@ -824,7 +826,7 @@ export const GiancarloDashboard = (navigate, user) => {
                     
                     const studentProfile = task.task_assignments?.[0]?.profiles || {};
                     const sName = studentProfile.name || '---';
-                    const sAvatar = studentProfile.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${sName}`;
+                    const sAvatar = studentProfile.avatar_url;
 
                     card.innerHTML = `
                         <div style="flex:1; display:flex; align-items:center; gap:2rem;">
@@ -832,9 +834,9 @@ export const GiancarloDashboard = (navigate, user) => {
                             
                             <!-- Student Avatar -->
                             <div style="position: relative; flex-shrink: 0;">
-                                <img src="${sAvatar}" 
-                                     style="width: 4rem; height: 4rem; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #f0f0f0;" 
-                                     alt="${sName}">
+                                <div style="width: 4rem; height: 4rem; border-radius: 50%; overflow: hidden; background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 1.6rem; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); color: var(--color-ink); font-weight: 700;">
+                                    ${sAvatar ? `<img src="${sAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : sName.charAt(0)}
+                                </div>
                                 ${task.computedStatus === 'TO REVIEW' ? `<div style="position: absolute; top: -2px; right: -2px; width: 1.4rem; height: 1.4rem; background: var(--color-terracota); border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.1);"></div>` : ''}
                             </div>
 

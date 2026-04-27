@@ -121,9 +121,10 @@ export const StudentStatsPage = (navigate, user) => {
                 const activityFeed = [];
 
                 assignments.forEach(assign => {
-                    const submissions = assign.submissions || [];
-                    const isSubmitted = submissions.length > 0;
-                    const latestSub = isSubmitted ? submissions.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0] : null;
+                    const allSubmissions = assign.submissions || [];
+                    const activeSubmissions = allSubmissions.filter(s => s.status !== 'draft');
+                    const isSubmitted = activeSubmissions.length > 0;
+                    const latestSub = isSubmitted ? activeSubmissions.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0] : null;
                     const isReviewed = latestSub && (latestSub.status === 'reviewed' || (latestSub.feedback && latestSub.feedback.length > 0));
                     const isWaiting = latestSub && !isReviewed;
 

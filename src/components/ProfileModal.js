@@ -29,8 +29,9 @@ export const ProfileModal = (user, onUpdate) => {
                         background: white; border: 4px solid white; 
                         box-shadow: 0 15px 45px rgba(0,0,0,0.12); cursor: pointer; 
                         overflow: hidden; position: relative; transition: all 0.4s ease;
+                        display: flex; align-items: center; justify-content: center;
                     ">
-                        ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:4rem; background:#f9f9f9; color:#ccc;">👤</div>`}
+                        ${user.avatar_url ? `<img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-family: var(--font-titles); font-size: 8rem; color: var(--color-ink); font-weight: 700; opacity: 0.2;">${user.name.charAt(0)}</div>`}
                         <div id="p-avatar-hover" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(107, 16, 36, 0.6); opacity:0; display:flex; align-items:center; justify-content:center; color:white; font-family:var(--font-ui); font-size:1rem; font-weight:950; text-transform:uppercase; letter-spacing:0.2em; transition:0.3s; backdrop-filter: blur(4px);">Cambia Foto</div>
                         <div id="p-avatar-loader" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.8); display:none; align-items:center; justify-content:center; font-size:0.8rem; color:var(--color-ink); font-weight:900;">ATTENDI...</div>
                     </div>
