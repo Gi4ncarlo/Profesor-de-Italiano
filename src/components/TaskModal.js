@@ -31,6 +31,7 @@ export const TaskModal = (onComplete) => {
     let currentTask = null;
     let autosaveInterval = null;
     let speedTimerInterval = null;
+    let phraseTimerInterval = null;
     let lastSavedTime = null;
 
 
@@ -831,6 +832,107 @@ export const TaskModal = (onComplete) => {
         `;
     };
 
+    const renderSpeedFrasiContent = (task) => {
+        const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
+        let savedData = { score: 0, completedIndices: [], skippedIndices: [] };
+        try {
+            const src = task.student_answer || task.answers;
+            if (typeof src === 'string' && src.startsWith('{')) {
+                savedData = JSON.parse(src);
+            } else if (typeof src === 'object' && src !== null) {
+                savedData = src;
+            } else {
+                savedData = { score: Number(src) || 0, completedIndices: [], skippedIndices: [] };
+            }
+        } catch(e) {
+            savedData = { score: 0, completedIndices: [], skippedIndices: [] };
+        }
+
+        const sentences = task.content?.sentences || [];
+        const timeLimit = task.content?.timeLimit || 15;
+        const completedIndices = Array.isArray(savedData.completedIndices) ? savedData.completedIndices.map(Number) : [];
+        const skippedIndices = Array.isArray(savedData.skippedIndices) ? savedData.skippedIndices.map(Number) : [];
+        const score = savedData.score || completedIndices.length;
+
+        return `
+            <div style="margin-bottom: 4.5rem;">
+                <div style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.25em; margin-bottom: 2.8rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <span style="display: flex; align-items: center; gap: 1.5rem;"><span>VELOCITÀ FRASI ⏱️</span> <div style="height: 1.5px; width: 60px; background: rgba(0,0,0,0.15);"></div></span>
+                    ${isReadOnly ? `<span style="font-size: 1.6rem; font-weight: 800; color: var(--color-terracota);">Score: ${score} frasi</span>` : `<span id="speed-frasi-timer" style="font-size: 2.4rem; font-weight: 900; color: var(--color-ink); font-variant-numeric: tabular-nums;">${timeLimit}s</span>`}
+                </div>
+                <div style="background: var(--color-espresso); border-radius: 3.5rem; padding: 6rem 5rem; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(28,15,7,0.15);">
+                    ${!isReadOnly ? `<div id="speed-frasi-progress" style="position: absolute; bottom: 0; left: 0; height: 6px; background: var(--color-terracota); width: 100%; transform-origin: left; transition: transform 1s linear;"></div>` : ''}
+                    
+                    ${isReadOnly ? 
+                      `
+                      <div style="text-align: center; margin-bottom: 5rem;">
+                          <div style="font-family: var(--font-body); font-size: 3.5rem; color: var(--color-parchment); font-weight: 700;">Il tuo record: <span style="color: var(--color-terracota);">${score}</span> frasi</div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+                        ${sentences.map((s, i) => {
+                            const isDone = completedIndices.includes(Number(i));
+                            const isSkipped = skippedIndices.includes(Number(i));
+                            
+                            let color = '#ef4444'; // Red for timeout
+                            let bgColor = 'rgba(239, 68, 68, 0.1)';
+                            let label = 'NON RAGGIUNTA';
+                            
+                            if (isDone) {
+                                color = '#10b981'; // Green for correct
+                                bgColor = 'rgba(16, 185, 129, 0.1)';
+                                label = 'CORRETTA';
+                            } else if (isSkipped) {
+                                color = '#f59e0b'; // Orange for skipped
+                                bgColor = 'rgba(245, 158, 11, 0.1)';
+                                label = 'SALTEATA ⏭';
+                            }
+
+                            const answerText = (s.blanks && s.blanks.length > 0) ? s.blanks.join(', ') : (s.blank || '---');
+                            
+                            return `
+                                <div style="padding: 2rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.8rem; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; right: 0; padding: 0.3rem 0.6rem; background: ${color}22; color: ${color}; font-family: var(--font-ui); font-size: 0.55rem; font-weight: 950; border-bottom-left-radius: 8px;">${label}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.2rem; color: white; font-weight: 600; opacity: 0.9; margin-top: 0.4rem; line-height: 1.5;">${s.text}</div>
+                                    <div style="height: 1px; background: white; opacity: 0.1; margin: 0.3rem 0;"></div>
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: ${color}; font-weight: 800;">${answerText}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                      </div>
+                      `
+                      :
+                      `
+                      <div id="speed-frasi-start-screen" style="text-align: center;">
+                          <div style="font-family: var(--font-body); font-size: 2.6rem; color: white; margin-bottom: 2rem; font-weight: 600;">Completa le frasi più veloce che puoi! (${timeLimit}s per frase)</div>
+                          <button id="speed-frasi-start-btn" style="background: var(--color-terracota); color: white; border: none; padding: 1.8rem 5rem; border-radius: 4rem; font-size: 1.8rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.15em; transition: transform 0.2s;">INIZIA</button>
+                      </div>
+                      <div id="speed-frasi-game-screen" style="display: none; text-align: center;">
+                          <div id="speed-frasi-current-word" style="font-family: var(--font-body); font-size: 3rem; line-height: 1.5; color: var(--color-parchment); font-weight: 600; margin-bottom: 4rem; opacity: 1; transition: all 0.2s; transform-origin: center;">...</div>
+                          <input type="text" id="speed-frasi-input" autocomplete="off" style="width: 100%; max-width: 30rem; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); border-radius: 2rem; padding: 1.5rem 2rem; font-size: 2.4rem; color: white; text-align: center; font-family: var(--font-body); outline: none; transition: border-color 0.2s;" placeholder="Scrivi qui...">
+                          <div style="display: flex; justify-content: center; align-items: center; gap: 3rem; margin-top: 3.5rem;">
+                              <div id="speed-frasi-counter-display" style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 900; color: var(--color-terracota); background: rgba(255,255,255,0.05); padding: 0.8rem 1.8rem; border-radius: 4rem; border: 1.5px solid rgba(255,255,255,0.1); letter-spacing: 0.15em; display: flex; align-items: center; gap: 1rem;">
+                                  <span style="opacity: 0.5;">PROGRESO</span>
+                                  <span id="speed-frasi-count-num" style="color: white; font-size: 1.6rem;">0 / ${sentences.length}</span>
+                              </div>
+                              <div id="speed-frasi-score-display" style="font-family: var(--font-ui); font-size: 1.1rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.2em;">CORRETTE: <span style="color: #10b981; font-size: 1.8rem; margin-left: 0.5rem;">0</span></div>
+                          </div>
+                          <button id="speed-frasi-skip-btn" style="margin-top: 4rem; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); font-family: var(--font-ui); font-size: 1.1rem; font-weight: 800; padding: 1.2rem 3rem; border-radius: 1.5rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.15em; transition: all 0.3s;">Saltear frase ⏭</button>
+                      </div>
+                      <div id="speed-frasi-end-screen" style="display: none; text-align: center;">
+                          <div style="font-family: var(--font-heading); font-size: 4rem; color: white; margin-bottom: 1rem;">Tempo Esaurito!</div>
+                          <div style="font-family: var(--font-body); font-size: 2.2rem; color: rgba(255,255,255,0.7); margin-bottom: 3rem;">Hai completato <span id="speed-frasi-final-score" style="color: var(--color-terracota); font-weight: 800; font-size: 3rem;">0</span> frasi</div>
+                      </div>
+                      <div id="speed-frasi-perfect-msg" style="display: none; text-align: center; background: #10b981; padding: 2.5rem; border-radius: 2rem; margin-top: 2rem; animation: coutureSlideIn 0.5s ease;">
+                           <div style="font-family: var(--font-heading); font-size: 2.2rem; color: white; margin-bottom: 0.5rem;">✨ ECCELSO! ✨</div>
+                           <div style="font-family: var(--font-body); font-size: 1.4rem; color: white; opacity: 0.9;">Tutte le frasi completate. Invio automatico...</div>
+                      </div>
+                      `
+                    }
+                </div>
+            </div>
+        `;
+    };
+
     const renderSpeedContent = (task) => {
         const isReadOnly = task.status !== 'pending' && task.status !== 'draft';
         let savedData = { score: 0, completedIndices: [], skippedIndices: [] };
@@ -932,6 +1034,7 @@ export const TaskModal = (onComplete) => {
     const close = () => {
         if (autosaveInterval) clearInterval(autosaveInterval);
         if (speedTimerInterval) clearInterval(speedTimerInterval);
+        if (phraseTimerInterval) clearInterval(phraseTimerInterval);
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         overlay.style.opacity = '0';
 
@@ -945,6 +1048,7 @@ export const TaskModal = (onComplete) => {
 
     const open = async (task) => {
         currentTask = task;
+        let isSubmitting = false;
         
         // --- 1. Load Draft if Pending ---
         let draftAnswers = null;
@@ -980,9 +1084,10 @@ export const TaskModal = (onComplete) => {
         else if (type === 'pronuncia') modal.innerHTML += renderPronunciaContent(task);
         else if (type === 'memory') modal.innerHTML += renderMemoryContent(task);
         else if (type === 'speed') modal.innerHTML += renderSpeedContent(task);
+        else if (type === 'velocita_frasi') modal.innerHTML += renderSpeedFrasiContent(task);
 
         // CHOICE GAP LOGIC
-        if (type === 'fill_choice' && task.status === 'pending') {
+        if (type === 'fill_choice' && (task.status === 'pending' || task.status === 'draft')) {
             const gaps = modal.querySelectorAll('.choice-gap');
             let studentAnswers = [];
             try {
@@ -1093,7 +1198,7 @@ export const TaskModal = (onComplete) => {
             updateUI();
         }
         // TRANSLATION CHOICE - immediate feedback on click
-        if (type === 'translation_choice' && task.status === 'pending') {
+        if (type === 'translation_choice' && (task.status === 'pending' || task.status === 'draft')) {
             let tcSelected = null;
             modal.querySelectorAll('.tc-option').forEach(opt => {
                 opt.onmouseenter = () => { if (!tcSelected) opt.style.transform = 'translateX(6px)'; };
@@ -1118,7 +1223,7 @@ export const TaskModal = (onComplete) => {
         }
 
         // LEGACY DICTATION LOGIC (uses SpeechSynthesis)
-        if (type === 'dictation' && task.status === 'pending') {
+        if (type === 'dictation' && (task.status === 'pending' || task.status === 'draft')) {
             const playBtn = modal.querySelector('#dettato-play');
             let utterance = null;
             playBtn.onclick = () => {
@@ -1200,7 +1305,7 @@ export const TaskModal = (onComplete) => {
         }
 
         // PRONUNCIA LOGIC
-        if (type === 'pronuncia' && task.status === 'pending') {
+        if (type === 'pronuncia' && (task.status === 'pending' || task.status === 'draft')) {
             const mount = modal.querySelector('#pronuncia-recorder-mount');
             const attemptsEl = modal.querySelector('#pronuncia-attempts');
             if (!mount) return;
@@ -1217,7 +1322,21 @@ export const TaskModal = (onComplete) => {
             };
 
             const recorder = AudioRecorder((blob, confirmed) => {
-                if (blob) currentBlob = blob;
+                if (blob) {
+                    currentBlob = blob;
+                    if (confirmed) {
+                        toast.show("Registrazione salvata! Ora clicca 'CONSEGNARE' per finire. ✨", "success");
+                        const btnSubmit = modal.querySelector('.btn-primary');
+                        if (btnSubmit) {
+                            btnSubmit.style.transform = 'scale(1.1)';
+                            btnSubmit.style.boxShadow = '0 0 30px rgba(107, 16, 36, 0.4)';
+                            setTimeout(() => {
+                                btnSubmit.style.transform = '';
+                                btnSubmit.style.boxShadow = '';
+                            }, 2000);
+                        }
+                    }
+                }
             }, 120, false);
 
             const origReset = recorder.querySelector ? null : null;
@@ -1242,10 +1361,18 @@ export const TaskModal = (onComplete) => {
             // Store blob reference on mount for submit handler
             mount._getBlob = () => currentBlob;
             mount._attemptsLeft = () => attemptsLeft;
+
+            // Trigger an initial save or state update when they start recording
+            const origOnAudioReady = (blob) => {
+                if (blob) {
+                    currentBlob = blob;
+                    performAutosave(); // Save that something was recorded
+                }
+            };
         }
 
         // MEMORY LOGIC
-        if (type === 'memory' && task.status === 'pending') {
+        if (type === 'memory' && (task.status === 'pending' || task.status === 'draft')) {
             const grid = modal.querySelector('#memory-grid');
             const scoreEl = modal.querySelector('#memory-score');
             let attempts = 0;
@@ -1321,8 +1448,213 @@ export const TaskModal = (onComplete) => {
             });
         }
 
+        // SPEED FRASI LOGIC
+        if (type === 'velocita_frasi' && (task.status === 'pending' || task.status === 'draft')) {
+            const startBtn = modal.querySelector('#speed-frasi-start-btn');
+            const startScreen = modal.querySelector('#speed-frasi-start-screen');
+            const gameScreen = modal.querySelector('#speed-frasi-game-screen');
+            const endScreen = modal.querySelector('#speed-frasi-end-screen');
+            const wordDisplay = modal.querySelector('#speed-frasi-current-word');
+            const inputMask = modal.querySelector('#speed-frasi-input');
+            const scoreDisplay = modal.querySelector('#speed-frasi-score-display span');
+            const finalScoreDisplay = modal.querySelector('#speed-frasi-final-score');
+            const timerDisplay = modal.querySelector('#speed-frasi-timer');
+            const progressBar = modal.querySelector('#speed-frasi-progress');
+            const speedCountDisplay = modal.querySelector('#speed-frasi-count-num');
+            const skipBtn = modal.querySelector('#speed-frasi-skip-btn');
+            
+            let sentences = JSON.parse(JSON.stringify(task.content?.sentences || []));
+            let totalTimeLimit = parseInt(task.content?.timeLimit || 15);
+            let score = 0;
+            let currentSentenceObj = null;
+            let completedIndices = [];
+            let skippedIndices = [];
+            
+            // Per phrase timer
+            let phraseTimeLeft = totalTimeLimit;
+            phraseTimerInterval = null;
+            
+            const clean = (str) => String(str || "").toLowerCase().trim().replace(/[.,!?;]/g, '');
+            
+            const updateCountDisplay = () => {
+                if (speedCountDisplay) {
+                    speedCountDisplay.innerText = `${completedIndices.length + skippedIndices.length} / ${sentences.length}`;
+                }
+            };
+
+            const updateTimerDisplay = () => {
+                if (timerDisplay) {
+                    timerDisplay.innerText = phraseTimeLeft + 's';
+                    timerDisplay.style.color = phraseTimeLeft <= 5 ? '#ef4444' : 'var(--color-ink)';
+                }
+            };
+
+            const nextPhrase = () => {
+                const available = sentences.map((s, i) => i).filter(i => !completedIndices.includes(i) && !skippedIndices.includes(i));
+                
+                if (available.length === 0) {
+                    endGame(skippedIndices.length === 0);
+                    return;
+                }
+                
+                const nextIdx = available[0];
+                currentSentenceObj = sentences[nextIdx];
+                currentSentenceObj._idx = nextIdx;
+                
+                // Support both old 'blank' and new 'blanks' array
+                const sentenceBlanks = currentSentenceObj.blanks || (currentSentenceObj.blank ? [currentSentenceObj.blank] : []);
+                currentSentenceObj._blanks = sentenceBlanks;
+                currentSentenceObj._filledBlanks = new Array(sentenceBlanks.length).fill(false);
+                
+                renderSentenceWithGaps();
+
+                wordDisplay.style.transform = 'scale(0.95)';
+                wordDisplay.style.opacity = '0';
+                
+                setTimeout(() => {
+                    wordDisplay.style.transform = 'scale(1)';
+                    wordDisplay.style.opacity = '1';
+                    inputMask.value = '';
+                    inputMask.focus();
+                    
+                    startPhraseTimer();
+                }, 200);
+            };
+
+            const renderSentenceWithGaps = () => {
+                const originalText = currentSentenceObj.text || "";
+                let htmlStr = originalText;
+                
+                currentSentenceObj._blanks.forEach((b, i) => {
+                    const isFilled = currentSentenceObj._filledBlanks[i];
+                    const reg = new RegExp(`\\b${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                    const replacement = isFilled ? 
+                        `<span style="color: #10b981; font-weight: 800; border-bottom: 3px solid #10b981;">${b}</span>` :
+                        `<span style="display: inline-block; width: 10rem; border-bottom: 3px solid rgba(255,255,255,0.3); margin: 0 0.5rem; position: relative; top: -5px; background: rgba(255,255,255,0.1); border-radius: 4px;"></span>`;
+                    htmlStr = htmlStr.replace(reg, replacement);
+                });
+                wordDisplay.innerHTML = htmlStr;
+            };
+
+            const startPhraseTimer = () => {
+                if (phraseTimerInterval) clearInterval(phraseTimerInterval);
+                phraseTimeLeft = totalTimeLimit;
+                updateTimerUI();
+                
+                phraseTimerInterval = setInterval(() => {
+                    phraseTimeLeft--;
+                    updateTimerUI();
+                    
+                    if (phraseTimeLeft <= 0) {
+                        clearInterval(phraseTimerInterval);
+                        handleSkip();
+                    }
+                }, 1000);
+            };
+
+            const updateTimerUI = () => {
+                if (timerDisplay) {
+                    timerDisplay.innerText = phraseTimeLeft + 's';
+                    if (phraseTimeLeft <= 5) {
+                        timerDisplay.style.color = '#ef4444';
+                        timerDisplay.style.animation = 'pulse 1s infinite';
+                    } else {
+                        timerDisplay.style.color = 'var(--color-ink)';
+                        timerDisplay.style.animation = 'none';
+                    }
+                }
+                if (progressBar) {
+                    const pct = (phraseTimeLeft / totalTimeLimit) * 100;
+                    progressBar.style.transform = `scaleX(${pct / 100})`;
+                    progressBar.style.background = phraseTimeLeft < 5 ? '#ef4444' : 'var(--color-terracota)';
+                }
+            };
+
+            const handleSkip = () => {
+                if (!currentSentenceObj) return;
+                skippedIndices.push(currentSentenceObj._idx);
+                updateCountDisplay();
+                nextPhrase();
+            };
+
+            const endGame = (isPerfect = false) => {
+                if (phraseTimerInterval) clearInterval(phraseTimerInterval);
+                gameScreen.style.display = 'none';
+                endScreen.style.display = 'block';
+                finalScoreDisplay.innerText = score;
+                inputMask.blur();
+                
+                gameScreen.dataset.completed = "true";
+                gameScreen.dataset.score = JSON.stringify({ score, completedIndices, skippedIndices });
+
+                if (isPerfect) {
+                    const perfectMsg = modal.querySelector('#speed-frasi-perfect-msg');
+                    if (perfectMsg) perfectMsg.style.display = 'block';
+                    setTimeout(() => {
+                        const btnSubmit = modal.querySelector('.btn-primary');
+                        if (btnSubmit) btnSubmit.click();
+                    }, 2500);
+                }
+            };
+
+            if (startBtn) {
+                startBtn.onclick = () => {
+                    startScreen.style.display = 'none';
+                    gameScreen.style.display = 'block';
+                    nextPhrase();
+                    updateCountDisplay();
+                };
+            }
+            
+            if (skipBtn) {
+                skipBtn.onclick = () => {
+                    if (phraseTimerInterval) clearInterval(phraseTimerInterval);
+                    handleSkip();
+                    inputMask.focus();
+                };
+            }
+
+            if (inputMask) {
+                inputMask.oninput = (e) => {
+                    const val = clean(e.target.value);
+                    if (!val || !currentSentenceObj) return;
+                    
+                    const foundIdx = currentSentenceObj._blanks.findIndex((b, idx) => !currentSentenceObj._filledBlanks[idx] && clean(b) === val);
+                    
+                    if (foundIdx !== -1) {
+                        currentSentenceObj._filledBlanks[foundIdx] = true;
+                        e.target.value = '';
+                        
+                        const allFilled = currentSentenceObj._filledBlanks.every(f => f);
+                        
+                        if (allFilled) {
+                            clearInterval(phraseTimerInterval);
+                            score++;
+                            scoreDisplay.innerText = score;
+                            completedIndices.push(currentSentenceObj._idx);
+                            updateCountDisplay();
+                            
+                            wordDisplay.style.transform = 'scale(1.05)';
+                            wordDisplay.style.color = '#10b981';
+                            
+                            setTimeout(() => {
+                                wordDisplay.style.color = 'var(--color-parchment)';
+                                nextPhrase();
+                            }, 300);
+                        } else {
+                            renderSentenceWithGaps();
+                        }
+                    }
+                };
+
+                inputMask.onkeydown = (e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                };
+            }
+        }
+
         // SPEED LOGIC
-        if (type === 'speed' && task.status === 'pending') {
+        if (type === 'speed' && (task.status === 'pending' || task.status === 'draft')) {
             const startBtn = modal.querySelector('#speed-start-btn');
             const startScreen = modal.querySelector('#speed-start-screen');
             const gameScreen = modal.querySelector('#speed-game-screen');
@@ -1470,7 +1802,7 @@ export const TaskModal = (onComplete) => {
 
 
         const footer = document.createElement('div');
-        footer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 5rem;';
+        footer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 4rem; position: sticky; bottom: 0; background: linear-gradient(to top, white 90%, rgba(255,255,255,0)); padding: 4rem 0 2rem; z-index: 100;';
 
         const btnCancel = document.createElement('button');
         btnCancel.innerText = 'Chiudi Registro';
@@ -1554,73 +1886,90 @@ export const TaskModal = (onComplete) => {
             };
 
             btnSubmit.onclick = async () => {
+                if (btnSubmit.disabled || isSubmitting) return;
+                isSubmitting = true;
                 let answer;
                 if (type === 'fill' || type === 'completare' || type === 'translation' || type === 'traduzione') {
                     answer = Array.from(modal.querySelectorAll('.task-input')).map(i => i.value);
+                    const hasAll = answer.every(a => a.trim() !== '');
+                    if (!hasAll) { isSubmitting = false; return toast.show("Completa tutti gli spazi!", "warning"); }
                 } else if (type === 'roleplay' || type === 'conversazione') {
                     answer = modal.querySelector('.task-textarea').value;
-                    if (!answer.trim()) return toast.show("Scrivi qualcosa prima!", "warning");
+                    if (!answer.trim()) { isSubmitting = false; return toast.show("Scrivi qualcosa prima!", "warning"); }
                 } else if (type === 'fill_choice') {
                     answer = Array.from(modal.querySelectorAll('.choice-gap')).map(g => g.querySelector('.choice-label').innerText);
-                    if (answer.some(a => a === '...')) return toast.show("Completa tutti los espacios!", "warning");
+                    if (answer.some(a => a === '...')) { isSubmitting = false; return toast.show("Completa tutti los espacios!", "warning"); }
                 } else if (type === 'order_sentence') {
                     answer = Array.from(modal.querySelector('#os-target-zone').querySelectorAll('.os-word-token')).map(t => t.innerText);
                     if (answer.length < (currentTask.content?.words?.length || 0)) {
+                        isSubmitting = false;
                         return toast.show("Usa tutte le parole per favore!", "warning");
                     }
                 } else if (type === 'translation_choice') {
                     const selected = modal.querySelector('.tc-option[data-selected="true"]');
                     answer = selected ? selected.dataset.val : null;
-                    if (!answer) return toast.show("Seleziona una risposta!", "warning");
+                    if (!answer) { isSubmitting = false; return toast.show("Seleziona una risposta!", "warning"); }
                 } else if (type === 'error_correction') {
                     answer = (modal.querySelector('#ec-input')?.value || '').trim();
-                    if (!answer) return toast.show("Scrivi la tua correzione!", "warning");
+                    if (!answer) { isSubmitting = false; return toast.show("Scrivi la tua correzione!", "warning"); }
                 } else if (type === 'dictation') {
                     answer = (modal.querySelector('#dettato-input')?.value || '').trim();
-                    if (!answer) return toast.show("Scrivi qualcosa nel dettato!", "warning");
+                    if (!answer) { isSubmitting = false; return toast.show("Scrivi qualcosa nel dettato!", "warning"); }
                 } else if (type === 'dettato') {
                     const c = task.content || {};
                     const isComprensione = !c.mode || c.mode === 'comprensione';
                     if (isComprensione) {
                         answer = (modal.querySelector('#dettato-input')?.value || '').trim();
-                        if (!answer) return toast.show("Scrivi quello che hai sentito!", "warning");
+                        if (!answer) { isSubmitting = false; return toast.show("Scrivi quello che hai sentito!", "warning"); }
                     } else {
                         const qAnswers = {};
                         modal.querySelectorAll('.dettato-q-ans').forEach(ta => {
                             qAnswers[ta.dataset.idx] = ta.value.trim();
                         });
                         const hasAny = Object.values(qAnswers).some(v => v);
-                        if (!hasAny) return toast.show("Rispondi ad almeno una domanda!", "warning");
+                        if (!hasAny) { isSubmitting = false; return toast.show("Rispondi ad almeno una pregunta!", "warning"); }
                         answer = qAnswers;
                     }
                 } else if (type === 'pronuncia') {
                     const mount = modal.querySelector('#pronuncia-recorder-mount');
                     const blob = mount?._getBlob?.();
-                    if (!blob) return toast.show("Registra la tua voce prima di consegnare!", "warning");
+                    if (!blob) { isSubmitting = false; return toast.show("Registra la tua voce prima di consegnare!", "warning"); }
                     btnSubmit.disabled = true;
-                    btnSubmit.innerText = 'Caricamento...';
+                    btnSubmit.innerHTML = 'Caricamento...';
                     try {
-                        const { url, error } = await uploadAudio(blob, 'alumna');
-                        if (error) throw new Error(error);
-                        answer = { audio_url: url };
+                        const result = await uploadAudio(blob, 'alumna');
+                        if (result.error || !result.url) {
+                            throw new Error(result.error?.message || "Errore nel caricamento.");
+                        }
+                        answer = { audio_url: result.url };
                     } catch(uploadErr) {
                         btnSubmit.disabled = false;
-                        btnSubmit.innerText = 'Consegnare';
-                        return toast.show("Errore nel caricamento audio. Riprova.", "error");
+                        isSubmitting = false;
+                        btnSubmit.innerHTML = 'Consegnare';
+                        return toast.show("Errore nel caricamento audio: " + uploadErr.message, "error");
                     }
                 } else if (type === 'memory') {
                     const grid = modal.querySelector('#memory-grid');
-                    if (!grid || !grid.dataset.completed) return toast.show("Completa il gioco prima di consegnare!", "warning");
+                    if (!grid || !grid.dataset.completed) { isSubmitting = false; return toast.show("Completa il gioco prima di consegnare!", "warning"); }
                     answer = grid.dataset.attempts;
                 } else if (type === 'speed') {
                     const gameScreen = modal.querySelector('#speed-game-screen');
-                    if (!gameScreen || !gameScreen.dataset.completed) return toast.show("Hai bisogno di finire i 60 secondi!", "warning");
-                    answer = gameScreen.dataset.score;
+                    if (!gameScreen || !gameScreen.dataset.completed) { isSubmitting = false; return toast.show("Hai bisogno di finire i 60 secondi!", "warning"); }
+                    try {
+                        answer = JSON.parse(gameScreen.dataset.score);
+                    } catch(e) { answer = gameScreen.dataset.score; }
+                } else if (type === 'velocita_frasi') {
+                    const gameScreen = modal.querySelector('#speed-frasi-game-screen');
+                    if (!gameScreen || !gameScreen.dataset.completed) { isSubmitting = false; return toast.show("Finisci l'attività prima di consegnare!", "warning"); }
+                    try {
+                        answer = JSON.parse(gameScreen.dataset.score);
+                    } catch(e) { answer = gameScreen.dataset.score; }
                 } else {
                     answer = "visto";
                 }
 
                 try {
+                    if (autosaveInterval) clearInterval(autosaveInterval);
                     btnSubmit.disabled = true;
                     btnSubmit.innerText = '...';
                     await completeTask(task.assignment_id, answer);
@@ -1635,8 +1984,9 @@ export const TaskModal = (onComplete) => {
                 } catch (err) {
                     console.error(err);
                     toast.show("Errore nell'invio.", "error");
-                } finally {
                     btnSubmit.disabled = false;
+                    isSubmitting = false;
+                    btnSubmit.innerText = 'Consegnare';
                 }
             };
             footer.appendChild(btnSubmit);
@@ -1670,11 +2020,27 @@ export const TaskModal = (onComplete) => {
                         });
                         return qAnswers;
                     }
+                } else if (type === 'velocita_frasi') {
+                    const gameScreen = modal.querySelector('#speed-frasi-game-screen');
+                    return gameScreen?.dataset.score ? JSON.parse(gameScreen.dataset.score) : null;
+                } else if (type === 'speed') {
+                    const gameScreen = modal.querySelector('#speed-game-screen');
+                    return gameScreen?.dataset.score ? JSON.parse(gameScreen.dataset.score) : null;
+                }
+                if (type === 'flashcard' || type === 'flashcards' || type === 'lessico') {
+                    return "visto";
+                }
+                if (type === 'pronuncia') {
+                    const mount = modal.querySelector('#pronuncia-recorder-mount');
+                    const blob = mount?._getBlob?.();
+                    return blob ? "registrato" : null;
                 }
                 return null;
             };
 
             const performAutosave = async () => {
+                if (isSubmitting || task.status === 'submitted' || task.status === 'reviewed') return;
+                
                 const answers = getAnswers();
                 if (!answers || (Array.isArray(answers) && answers.length === 0)) return;
                 

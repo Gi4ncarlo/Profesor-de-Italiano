@@ -16,7 +16,9 @@ const TYPE_TRANSLATIONS = {
     'dettato': '🎧 Dettato Audio',
     'pronuncia': '🎤 Pronuncia',
     'memory': '🃏 Memoria',
-    'speed': '⚡ Velocità'
+    'speed': '⚡ Velocità',
+    'velocita_frasi': '⚡ Velocità Frasi',
+    'fill_sentences': '⚡ Velocità Frasi'
 };
 
 /**
@@ -107,24 +109,15 @@ export const TaskDetailsPage = (navigate, user, params) => {
             const isAutoCorrect = ['fill', 'completare', 'flashcard', 'flashcards', 'lessico', 'order_sentence', 'translation_choice', 'error_correction', 'speed'].includes(type);
             
             if (isAutoCorrect && submissions.length > 0) {
-                const pendingSub = submissions.find(s => s.status === 'submitted');
-                if (pendingSub) {
-                    console.log(`Auto-reviewing ${type} task...`);
-                    let feedbackMsg = "Letto e registrato. Ottimo lavoro! ✨";
-                    if (type === 'order_sentence') feedbackMsg = "Ottimo lavoro con l'ordinamento delle frasi! Ho registrato i tuoi progressi. ✨";
-                    else if (type === 'speed') feedbackMsg = "Record di velocità registrato! Continua così. ⚡";
-
-                    // We don't await this to keep the UI fast, but we fire the update
-                    addFeedback({ 
-                        submissionId: pendingSub.id, 
-                        comment: feedbackMsg 
-                    }).then(() => {
-                        // Silently refresh the local state to show 'reviewed'
-                        pendingSub.status = 'reviewed';
-                        pendingSub.review_comment = feedbackMsg;
-                        render();
-                    });
-                }
+                // Determine suggested feedback but don't auto-submit it
+                submissions.forEach(sub => {
+                    if (sub.status === 'submitted' && (!sub.feedback || sub.feedback.length === 0)) {
+                        let feedbackMsg = "Letto e registrato. Ottimo lavoro! ✨";
+                        if (type === 'order_sentence') feedbackMsg = "Ottimo lavoro con l'ordinamento delle frasi! Ho registrato i tuoi progressi. ✨";
+                        else if (type === 'speed') feedbackMsg = "Record di velocità registrato! Continua così. ⚡";
+                        sub.suggestedFeedback = feedbackMsg;
+                    }
+                });
             }
         } catch (err) {
             console.error(err);
@@ -135,10 +128,19 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
     };
 
-    const handleFeedbackSave = async (subId, comment) => {
+    const handleFeedbackSave = async (subId, comment, rating) => {
         if (!comment.trim()) return toast.show("Manca il commento.", "error");
+        
         try {
-            const { error } = await addFeedback({ submissionId: subId, comment: comment });
+            // Encode the rating visually in the comment (if selected)
+            let finalComment = comment;
+            if (rating && rating > 0) {
+                let starsStr = '';
+                for (let i = 0; i < rating; i++) starsStr += '⭐';
+                finalComment = `${starsStr}\n\n${comment}`;
+            }
+            
+            const { error } = await addFeedback({ submissionId: subId, comment: finalComment });
             if (error) throw error;
             toast.show("Sigillo inviato. ✨");
             await loadData(); 
@@ -501,7 +503,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
         }
 
         // 7. SPEED (VELOCITY)
-        if (type === 'speed' || c.type === 'speed') {
+        if (type === 'speed' || type === 'velocita_frasi' || c.type === 'speed') {
             let data = { score: 0, completedIndices: [], skippedIndices: [] };
             try {
                 const src = answers?.data || answers;
@@ -516,11 +518,12 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 data = { score: Number(answers) || 0, completedIndices: [], skippedIndices: [] };
             }
             
-            const words = c.words || [];
+            const isFrasi = type === 'velocita_frasi';
+            const items = isFrasi ? (c.sentences || []) : (c.words || []);
             const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
             const skippedIndices = Array.isArray(data.skippedIndices) ? data.skippedIndices.map(Number) : [];
             const score = data.score || completedIndices.length;
-            const isPerfect = completedIndices.length === words.length && words.length > 0;
+            const isPerfect = completedIndices.length === items.length && items.length > 0;
 
             return `
                 <div style="display: flex; flex-direction: column; gap: 3rem;">
@@ -528,7 +531,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                         <div>
                             <span class="ui-label" style="color: var(--color-ink); opacity: 0.6; margin-bottom: 0.8rem;">RISULTATO VELOCITÀ ⚡</span>
                             <div class="font-editorial" style="font-size: 3.5rem; color: var(--color-terracota); font-weight: 800;">
-                                ${score} <span style="font-size: 1.8rem; font-weight: 400; opacity: 0.5; color: var(--color-ink);">parole corrette</span>
+                                ${score} <span style="font-size: 1.8rem; font-weight: 400; opacity: 0.5; color: var(--color-ink);">${isFrasi ? 'frasi' : 'parole'} corrette</span>
                             </div>
                         </div>
                         ${isPerfect ? `
@@ -538,8 +541,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
                         ` : ''}
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem;">
-                        ${words.map((w, i) => {
+                    <div style="display: grid; grid-template-columns: ${isFrasi ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))'}; gap: 1.2rem;">
+                        ${items.map((item, i) => {
                             const isDone = completedIndices.includes(Number(i));
                             const isSkipped = skippedIndices.includes(Number(i));
                             
@@ -557,13 +560,17 @@ export const TaskDetailsPage = (navigate, user, params) => {
                                 label = 'SALTEATA ⏭';
                             }
                             
+                            const mainText = isFrasi ? (item.text || "") : (task.content.direction === 'it-es' ? (item.it || item.word) : (item.es || item.translation));
+                            const answerText = isFrasi ? 
+                                ((item.blanks && item.blanks.length > 0) ? item.blanks.join(', ') : (item.blank || '---')) :
+                                (task.content.direction === 'it-es' ? (item.es || item.translation) : (item.it || item.word));
+                            
                             return `
-                                <div style="padding: 1.5rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.4rem; position: relative; overflow: hidden;">
+                                <div style="padding: 2rem; border-radius: 12px; background: ${bgColor}; border: 1.5px solid ${color}44; display: flex; flex-direction: column; gap: 0.8rem; position: relative; overflow: hidden;">
                                     <div style="position: absolute; top: 0; right: 0; padding: 0.4rem 0.8rem; background: ${color}22; color: ${color}; font-family: var(--font-ui); font-size: 0.6rem; font-weight: 950; border-bottom-left-radius: 8px;">${label}</div>
-                                    <div style="font-family: var(--font-ui); font-size: 0.75rem; opacity: 0.4; text-transform: uppercase; margin-top: 0.5rem;">${task.content.direction === 'it-es' ? 'Italiano' : 'Spagnolo'}</div>
-                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink); font-weight: 600;">${task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink); font-weight: 600; line-height: 1.5;">${mainText}</div>
                                     <div style="height: 1px; background: ${color}22; margin: 0.4rem 0;"></div>
-                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: ${color}; font-weight: 800;">${task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: ${color}; font-weight: 800;">${answerText}</div>
                                 </div>
                             `;
                         }).join('')}
@@ -763,25 +770,67 @@ export const TaskDetailsPage = (navigate, user, params) => {
                         ${isReviewed ? `
                             <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">IL MIO SIGILLO ✒️</span>
                         ` : ''}
-                        ${sub.feedback ? sub.feedback.map(f => `
-                            <div class="feedback-note">
-                                <div class="feedback-comment">"${f.comment}"</div>
-                            </div>
-                        `).join('') : ''}
+                        ${(() => {
+                            // Deduplicate feedback by comment to avoid UI clones
+                            if (!sub.feedback) return '';
+                            const uniqueFeedback = [];
+                            const seenComments = new Set();
+                            sub.feedback.forEach(f => {
+                                if (!seenComments.has(f.comment)) {
+                                    seenComments.add(f.comment);
+                                    uniqueFeedback.push(f);
+                                }
+                            });
+                            return uniqueFeedback.map(f => `
+                                <div class="feedback-note">
+                                    <div class="feedback-comment" style="white-space: pre-wrap;">${f.comment}</div>
+                                </div>
+                            `).join('');
+                        })()}
                     </div>
 
                     ${!isReviewed ? `
                         <div style="margin-top: 4rem; padding-top: 3.5rem; border-top: 1.5px solid rgba(0,0,0,0.03);">
                             <span class="ui-label" style="margin-bottom: 1.5rem; color: var(--color-terracota); opacity: 0.7;">DEVOLUZIONE DEL MAESTRO</span>
-                            <textarea id="feedback-input-${sub.id}" style="width: 100%; border: none; background: #fffdfa; font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-ink); outline: none; min-height: 12rem; resize: none; border-bottom: 1.5px solid rgba(0,0,0,0.04); margin-bottom: 3rem; padding: 1.5rem;" placeholder="Escribe tu corrección aquí..."></textarea>
+                            
+                            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;" id="star-rating-${sub.id}">
+                                <div class="star-btn" data-val="1" style="font-size: 2.5rem; cursor: pointer; filter: grayscale(1); transition: all 0.2s;">⭐</div>
+                                <div class="star-btn" data-val="2" style="font-size: 2.5rem; cursor: pointer; filter: grayscale(1); transition: all 0.2s;">⭐</div>
+                                <div class="star-btn" data-val="3" style="font-size: 2.5rem; cursor: pointer; filter: grayscale(1); transition: all 0.2s;">⭐</div>
+                                <div class="star-btn" data-val="4" style="font-size: 2.5rem; cursor: pointer; filter: grayscale(1); transition: all 0.2s;">⭐</div>
+                            </div>
+                            
+                            ${sub.suggestedFeedback ? `<div style="margin-bottom: 1rem; font-family: var(--font-ui); font-size: 0.85rem; color: #10b981; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800;">💡 Correzione automatica suggerita</div>` : ''}
+                            <textarea id="feedback-input-${sub.id}" style="width: 100%; border: none; background: #fffdfa; font-family: var(--font-handwritten); font-size: 1.8rem; color: var(--color-ink); outline: none; min-height: 12rem; resize: none; border-bottom: 1.5px solid rgba(0,0,0,0.04); margin-bottom: 3rem; padding: 1.5rem;" placeholder="Escribe tu corrección aquí...">${sub.suggestedFeedback || ''}</textarea>
+                            
                             <div style="display: flex; justify-content: flex-end;">
                                 <button class="btn-feedback" id="btn-save-feedback-${sub.id}">Firma Giancarlo ✒️</button>
                             </div>
                         </div>
                     ` : ''}
                 `;
-                const btnSave = subCard.querySelector(`#btn-save-feedback-${sub.id}`);
-                if (btnSave) btnSave.onclick = async () => await handleFeedbackSave(sub.id, subCard.querySelector(`#feedback-input-${sub.id}`).value);
+                
+                if (!isReviewed) {
+                    let selectedRating = 0;
+                    const stars = subCard.querySelectorAll(`#star-rating-${sub.id} .star-btn`);
+                    stars.forEach(star => {
+                        star.onclick = () => {
+                            selectedRating = parseInt(star.getAttribute('data-val'));
+                            stars.forEach((s, idx) => {
+                                if (idx < selectedRating) {
+                                    s.style.filter = 'grayscale(0) drop-shadow(0 0 5px rgba(250, 204, 21, 0.4))';
+                                    s.style.transform = 'scale(1.1)';
+                                } else {
+                                    s.style.filter = 'grayscale(1)';
+                                    s.style.transform = 'scale(1)';
+                                }
+                            });
+                        };
+                    });
+                    
+                    const btnSave = subCard.querySelector(`#btn-save-feedback-${sub.id}`);
+                    if (btnSave) btnSave.onclick = async () => await handleFeedbackSave(sub.id, subCard.querySelector(`#feedback-input-${sub.id}`).value, selectedRating);
+                }
             }
             listContainer.appendChild(subCard);
         });
@@ -797,10 +846,35 @@ export const TaskDetailsPage = (navigate, user, params) => {
 
         const renderTaskItems = () => {
             const c = task.content || {};
+            const type = task.type?.toLowerCase();
+
+            // 1. VELOCITA FRASI or FILL (sentences array)
+            if (c.sentences && Array.isArray(c.sentences)) {
+                return `
+                    <div class="content-preview">
+                        ${c.sentences.map((s, i) => {
+                            const blanks = s.blanks || (s.blank ? [s.blank] : []);
+                            let previewText = s.text;
+                            blanks.forEach(b => {
+                                const reg = new RegExp(`\\b${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                                previewText = previewText.replace(reg, `<span style="color: var(--color-terracota); font-weight: 800; border-bottom: 2px solid var(--color-terracota);">${b}</span>`);
+                            });
+                            return `
+                                <div style="padding: 1.5rem 0; border-bottom: 1px solid rgba(0,0,0,0.03); line-height: 1.6;">
+                                    <div style="font-family: var(--font-body); font-size: 1.4rem; color: var(--color-ink);">
+                                        <span style="opacity: 0.3; margin-right: 1rem; font-family: var(--font-ui); font-size: 0.8rem; font-weight: 950;">${i+1}</span> ${previewText}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
             // Gather items from different possible property names
             const items = c.items || c.pairs || c.words || c.data || [];
             
-            if (task.type === 'dettato' && c.mode === 'domande' && c.questions?.length) {
+            if (type === 'dettato' && c.mode === 'domande' && c.questions?.length) {
                 return `
                     <div class="content-preview">
                         <span class="ui-label" style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 1rem; color: var(--color-ink);">DOMANDE PREVISTE</span>
@@ -816,9 +890,8 @@ export const TaskDetailsPage = (navigate, user, params) => {
             }
 
             if (!items.length && !c.text) {
-                // If it's a dettato task, use its special properties for the summary
                 let summary = c.description || 'Nessun dettaglio aggiuntivo.';
-                if (task.type === 'dettato') {
+                if (type === 'dettato') {
                     summary = c.mode === 'comprensione' 
                         ? `Trascrizione audio: "${(c.text || c.refText)?.substring(0, 50) || ''}..."`
                         : `Domande su audio (${c.questions?.length || 0} quesiti)`;
@@ -829,7 +902,7 @@ export const TaskDetailsPage = (navigate, user, params) => {
                 </p>`;
             }
 
-            if (task.type === 'order_sentence' || (Array.isArray(c.words) && !c.words[0]?.it)) {
+            if (type === 'order_sentence' || (Array.isArray(c.words) && !c.words[0]?.it)) {
                 const words = c.words || [];
                 return `<div class="content-preview" style="display: flex; flex-wrap: wrap; gap: 0.8rem;">
                     ${words.map(w => `<span style="padding: 0.6rem 1.2rem; background: rgba(0,0,0,0.03); border-radius: 8px; font-family: var(--font-body);">${w}</span>`).join('')}

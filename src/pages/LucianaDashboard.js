@@ -2,6 +2,8 @@ import { getStudentTasks } from '../services/tasks';
 import { signOut, updateProfile } from '../services/supabase';
 import { TaskModal } from '../components/TaskModal';
 import { ProfileModal } from '../components/ProfileModal';
+import { ConsultationModal } from '../components/ConsultationModal';
+import { getStudentConsultations } from '../services/consultations';
 import { LoadingSkeleton } from '../components/Loading';
 import { toast } from '../components/Toast';
 import { getNotifications, markAsRead, subscribeToNotifications, getNotificationContent, clearAllNotifications, cleanupOldNotifications } from '../services/notifications';
@@ -14,7 +16,8 @@ const TYPE_TRANSLATIONS = {
     'error_correction': 'Correzione',
     'dictation': '🎧 Dettato',
     'memory': '🃏 Memoria',
-    'speed': '⚡ Velocità'
+    'speed': '⚡ Velocità',
+    'velocita_frasi': '⚡ Velocità Frasi'
 };
 
 const RANDOM_QUOTES = [
@@ -38,6 +41,7 @@ export const LucianaDashboard = (navigate, user) => {
     container.className = 'dashboard-container';
 
     let assignments = [];
+    let consultations = [];
     let isLoading = true;
     let currentTab = 'pending'; // 'pending' or 'history'
     let notifications = [];
@@ -139,9 +143,14 @@ export const LucianaDashboard = (navigate, user) => {
     const refresh = async () => {
         isLoading = true; render();
         try {
-            const { data, error } = await getStudentTasks(user.id);
-            if (error) throw error;
-            assignments = data;
+            const [tasksRes, consRes] = await Promise.all([
+                getStudentTasks(user.id),
+                getStudentConsultations(user.id)
+            ]);
+            if (tasksRes.error) throw tasksRes.error;
+            if (consRes.error) throw consRes.error;
+            assignments = tasksRes.data;
+            consultations = consRes.data;
         } catch (err) { console.error(err); toast.show("Errore nel caricamento.", "error"); }
         finally { isLoading = false; render(); }
     };
@@ -159,6 +168,7 @@ export const LucianaDashboard = (navigate, user) => {
                 <nav>
                     <button class="sidebar-nav-btn active" id="btn-nav-dashboard">🏠 DASHBOARD</button>
                     <button class="sidebar-nav-btn" id="btn-nav-cuaderno">📓 IL MIO QUADERNO</button>
+                    <button class="sidebar-nav-btn" id="btn-nav-consultation">📅 LEZIONE DI CONSULTA</button>
                 </nav>
             </div>
             <div class="sidebar-profile">
@@ -203,8 +213,8 @@ export const LucianaDashboard = (navigate, user) => {
 
         // FILTER LISTS
         const listToShow = currentTab === 'pending' 
-            ? assignments.filter(s => s.status !== 'reviewed')
-            : assignments.filter(s => s.status === 'reviewed').sort((a,b) => new Date(b.assigned_at) - new Date(a.assigned_at));
+            ? assignments.filter(s => s.status !== 'reviewed' && s.status !== 'submitted')
+            : assignments.filter(s => s.status === 'reviewed' || s.status === 'submitted').sort((a,b) => new Date(b.assigned_at) - new Date(a.assigned_at));
 
         const randomQuote = RANDOM_QUOTES[Math.floor(Math.random() * RANDOM_QUOTES.length)];
 
@@ -249,6 +259,37 @@ export const LucianaDashboard = (navigate, user) => {
                         </h3>
                         <div id="tasks-list" style="display: flex; flex-direction: column; gap: 1.5rem;"></div>
                     </section>
+                    
+                    ${currentTab === 'pending' && consultations.filter(c => c.status === 'pending' || c.status === 'accepted').length > 0 ? `
+                        <section style="margin-top: 4rem;">
+                            <h3 class="luciana-section-title" style="color: var(--color-terracota);">Le mie Consultazioni</h3>
+                            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                ${consultations.filter(c => c.status === 'pending' || c.status === 'accepted').map(c => {
+                                    const dateObj = new Date(c.requested_datetime);
+                                    const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' });
+                                    const isAccepted = c.status === 'accepted';
+                                    
+                                    // Google Calendar Link generator
+                                    const endDate = new Date(dateObj.getTime() + 60 * 60 * 1000); // +1 hour
+                                    const formatDate = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+                                    const gcalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Lezione+di+Consulta+-+Italiano&dates=${formatDate(dateObj)}/${formatDate(endDate)}&details=${encodeURIComponent(c.topic || 'Lezione di consulta')}`;
+
+                                    return `
+                                        <div style="background: white; border-radius: 20px; padding: 2.5rem; border: 1.5px solid ${isAccepted ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+                                            <div>
+                                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem;">
+                                                    <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.15em; color: ${isAccepted ? '#10b981' : '#f59e0b'};">${isAccepted ? 'Confermata ✅' : 'In attesa ⏳'}</span>
+                                                </div>
+                                                <div style="font-family: var(--font-titles); font-size: 1.8rem; color: var(--color-ink); margin-bottom: 0.5rem; text-transform: capitalize;">${dateStr}</div>
+                                                <div style="font-family: var(--font-body); font-size: 1.3rem; opacity: 0.6; color: var(--color-ink);">${c.topic || 'Nessun argomento specificato'}</div>
+                                            </div>
+                                            ${isAccepted ? `<a href="${gcalLink}" target="_blank" style="background: #eff6ff; color: #1d4ed8; padding: 1rem 1.5rem; border-radius: 12px; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 0.8rem; border: 1.5px solid rgba(29, 78, 216, 0.1); transition: all 0.2s;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Aggiungi al Calendario</a>` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </section>
+                    ` : ''}
                 </div>
                 <div class="luciana-progress-wrap">
                     <div class="luciana-ring">
@@ -278,45 +319,85 @@ export const LucianaDashboard = (navigate, user) => {
             tList.appendChild(LoadingSkeleton(4));
         } else if (listToShow.length === 0) {
             tList.innerHTML = `<div style="padding: 6rem 2rem; text-align: center; font-family: var(--font-handwritten); font-size: 1.8rem; opacity: 0.2;">${currentTab === 'pending' ? 'Il tavolo è pulito... per ora. 🏛️' : 'Nessuna impronta nel passato.'}</div>`;
-        } else {
+        } else if (currentTab === 'pending') {
             listToShow.forEach((a, i) => {
-                const card = document.createElement('div');
-                card.className = 'luciana-task-card';
-                card.style.animationDelay = `${i * 0.08}s`;
-                let sClass = 'luciana-badge--pending', sText = 'Pendente';
-                if (a.status === 'submitted') { sClass = 'luciana-badge--submitted'; sText = 'Consegnato'; }
-                if (a.status === 'reviewed') { sClass = 'luciana-badge--reviewed'; sText = 'Visto'; }
-
-                const teacher = a.master || {};
-                const teacherName = teacher.name || 'Giancarlo';
-                const teacherAvatar = teacher.avatar_url;
-
-                card.innerHTML = `
-                    <div style="display: flex; align-items: flex-start; gap: 2.2rem; width: 100%;">
-                        <!-- Teacher Profile -->
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; min-width: 80px;">
-                            <div style="position: relative;">
-                                <div style="width: 5rem; height: 5rem; border-radius: 50%; overflow: hidden; background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 2rem; border: 2.5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.12); color: var(--color-ink); font-weight: 700;">
-                                    ${teacherAvatar ? `<img src="${teacherAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : teacherName.charAt(0)}
-                                </div>
-                                <div style="position: absolute; bottom: 0; right: 0; width: 1.8rem; height: 1.8rem; background: var(--color-olive); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">✒️</div>
-                            </div>
-                            <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 800; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">${teacherName}</span>
-                        </div>
-
-                        <div style="flex: 1;">
-                            <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.8rem;">
-                                <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.65; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink);">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
-                                <span class="luciana-badge ${sClass}" style="font-weight: 950; letter-spacing: 0.1em;">${sText}</span>
-                            </div>
-                            <h4 style="font-family: var(--font-titles); font-size: 1.85rem; margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
-                            <div style="font-family: var(--font-ui); font-size: 1.15rem; opacity: 0.5; font-weight: 800; color: var(--color-ink);">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
-                        </div>
-                    </div>
-                `;
-                card.onclick = () => taskModal.open(a);
+                const card = renderTaskCard(a, i);
                 tList.appendChild(card);
             });
+        } else {
+            // Group by month for history
+            const groups = {};
+            listToShow.forEach(t => {
+                const date = new Date(t.assigned_at);
+                const key = date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(t);
+            });
+
+            Object.entries(groups).forEach(([monthYear, tasks], gIdx) => {
+                const groupContainer = document.createElement('div');
+                groupContainer.className = 'history-month-group';
+                if (gIdx === 0) groupContainer.classList.add('active'); // Open first month by default
+
+                const header = document.createElement('div');
+                header.className = 'history-month-header';
+                header.innerHTML = `
+                    <span class="month-title">${monthYear.toUpperCase()}</span>
+                    <span class="month-count">${tasks.length} fogli</span>
+                    <span class="month-chevron">↓</span>
+                `;
+                header.onclick = () => groupContainer.classList.toggle('active');
+
+                const content = document.createElement('div');
+                content.className = 'history-month-content';
+                
+                tasks.forEach((a, i) => {
+                    content.appendChild(renderTaskCard(a, i));
+                });
+
+                groupContainer.appendChild(header);
+                groupContainer.appendChild(content);
+                tList.appendChild(groupContainer);
+            });
+        }
+
+        function renderTaskCard(a, i) {
+            const card = document.createElement('div');
+            card.className = 'luciana-task-card';
+            card.style.animationDelay = `${i * 0.08}s`;
+            let sClass = 'luciana-badge--pending', sText = 'Pendente';
+            if (a.status === 'draft') { sClass = 'luciana-badge--draft'; sText = 'In Svolgimento'; }
+            if (a.status === 'submitted') { sClass = 'luciana-badge--submitted'; sText = 'Consegnato'; }
+            if (a.status === 'reviewed') { sClass = 'luciana-badge--reviewed'; sText = 'Visto'; }
+
+            const teacher = a.master || {};
+            const teacherName = teacher.name || 'Giancarlo';
+            const teacherAvatar = teacher.avatar_url;
+
+            card.innerHTML = `
+                <div style="display: flex; align-items: flex-start; gap: 2.2rem; width: 100%;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; min-width: 80px;">
+                        <div style="position: relative;">
+                            <div style="width: 5rem; height: 5rem; border-radius: 50%; overflow: hidden; background: var(--color-crema); display: flex; align-items: center; justify-content: center; font-family: var(--font-titles); font-size: 2rem; border: 2.5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.12); color: var(--color-ink); font-weight: 700;">
+                                ${teacherAvatar ? `<img src="${teacherAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : teacherName.charAt(0)}
+                            </div>
+                            <div style="position: absolute; bottom: 0; right: 0; width: 1.8rem; height: 1.8rem; background: var(--color-olive); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">✒️</div>
+                        </div>
+                        <span style="font-family: var(--font-ui); font-size: 0.85rem; font-weight: 800; color: var(--color-ink); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-align: center;">${teacherName}</span>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.8rem;">
+                            <span style="font-family: var(--font-ui); font-size: 1.15rem; font-weight: 950; opacity: 0.65; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink);">${TYPE_TRANSLATIONS[a.type] || a.type}</span>
+                            <span class="luciana-badge ${sClass}" style="font-weight: 950; letter-spacing: 0.1em;">${sText}</span>
+                        </div>
+                        <h4 style="font-family: var(--font-titles); font-size: 1.85rem; margin: 0 0 0.5rem 0; font-weight: 600; color: var(--color-ink);">${a.title}</h4>
+                        <div style="font-family: var(--font-ui); font-size: 1.15rem; opacity: 0.5; font-weight: 800; color: var(--color-ink);">${new Date(a.assigned_at).toLocaleDateString('it-IT')}</div>
+                    </div>
+                </div>
+            `;
+            card.onclick = () => taskModal.open(a);
+            return card;
         }
 
         // TABS Events
@@ -328,6 +409,10 @@ export const LucianaDashboard = (navigate, user) => {
         sidebar.querySelector('#btn-nav-cuaderno').onclick = () => navigate('/mis-correcciones');
         sidebar.querySelector('#btn-logout').onclick = async () => { await signOut(); localStorage.removeItem('luci_user'); navigate('/login'); };
         sidebar.querySelector('#btn-settings').onclick = () => pModal.open(user);
+        
+        const cModal = ConsultationModal(user, () => refresh());
+        if (!document.body.contains(cModal.overlay)) document.body.appendChild(cModal.overlay);
+        sidebar.querySelector('#btn-nav-consultation').onclick = () => cModal.open();
 
 
         container.appendChild(sidebar);
@@ -405,6 +490,72 @@ export const LucianaDashboard = (navigate, user) => {
                 }
                 .luciana-cuaderno-card:hover::after {
                     transform: scaleX(1);
+                }
+
+                /* Accordion Styles */
+                .history-month-group {
+                    margin-bottom: 1.5rem;
+                    background: white;
+                    border-radius: 2.2rem;
+                    overflow: hidden;
+                    border: 1.5px solid rgba(0,0,0,0.03);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+                }
+                .history-month-header {
+                    padding: 2.5rem 3.5rem;
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    background: #fffcf8;
+                    transition: all 0.3s ease;
+                }
+                .history-month-header:hover {
+                    background: #fdf5e8;
+                }
+                .history-month-group.active .history-month-header {
+                    background: white;
+                    border-bottom: 1.2px solid rgba(0,0,0,0.03);
+                }
+                .month-title {
+                    font-family: var(--font-ui);
+                    font-size: 1.2rem;
+                    font-weight: 950;
+                    letter-spacing: 0.25em;
+                    color: var(--color-terracota);
+                    flex: 1;
+                }
+                .month-count {
+                    font-family: var(--font-body);
+                    font-size: 1.1rem;
+                    font-weight: 800;
+                    opacity: 0.4;
+                    margin-right: 2rem;
+                }
+                .month-chevron {
+                    font-size: 1.4rem;
+                    opacity: 0.3;
+                    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                .history-month-group.active .month-chevron {
+                    transform: rotate(180deg);
+                    opacity: 0.8;
+                }
+                .history-month-content {
+                    max-height: 0;
+                    overflow: hidden;
+                    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.5rem;
+                    padding: 0 2rem;
+                }
+                .history-month-group.active .history-month-content {
+                    max-height: 2000px; /* Large enough for many tasks */
+                    padding: 2.5rem 2rem;
+                }
+                .history-month-group .luciana-task-card {
+                    box-shadow: none;
+                    border: 1px solid rgba(0,0,0,0.04);
                 }
             `;
             document.head.appendChild(style);

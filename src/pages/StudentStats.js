@@ -36,15 +36,13 @@ export const StudentStatsPage = (navigate, user) => {
         // Type Filter
         if (filter !== 'Tutte') {
             const map = {
-                'Traduzioni': ['translation', 'translation_choice'],
-                'Dettato': ['dettato', 'dictation'],
-                'Pronuncia': ['pronuncia'],
+                'Traducción': ['translation', 'translation_choice'],
+                'Velocità': ['speed', 'velocita_frasi'],
+                'Pronuncia': ['pronuncia', 'dettato'],
                 'Ordina Frase': ['order_sentence'],
                 'Scelta Multipla': ['fill_choice'],
                 'Esercizi': ['fill', 'error_correction', 'memory', 'lessico', 'completare'],
-                'Lessico': ['flashcard', 'flashcards'],
-                'Conversazione': ['roleplay', 'conversazione'],
-                'Velocità': ['speed']
+                'Lessico': ['flashcard', 'flashcards']
             };
             const targets = map[filter] || [];
             results = results.filter(act => targets.includes(act.type?.toLowerCase()));

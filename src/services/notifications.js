@@ -164,7 +164,13 @@ export const getNotificationContent = (notif) => {
             return `Giancarlo ha sigillato: "${taskTitle}" ✨`;
         case 'new_assignment':
             return `Nuovo atto per te: "${taskTitle}" 📓`;
+        case 'new_consultation_request':
+            return `Nuova richiesta di consulta! 📅`;
+        case 'consultation_accepted':
+            return `La tua consulta è stata confermata! ✅`;
+        case 'consultation_rejected':
+            return `La consulta è stata rifiutata o riprogrammata. ❌`;
         default:
-            return `Aggiornamento in: "${taskTitle}"`;
+            return `Aggiornamento: ${notif.type}`;
     }
 };

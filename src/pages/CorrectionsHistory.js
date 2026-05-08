@@ -15,6 +15,7 @@ const TYPE_TRANSLATIONS = {
     'dictation': 'Dettato',
     'memory': 'Memoria',
     'speed': 'Velocità',
+    'velocita_frasi': 'Velocità Frasi',
     'pronuncia': '🎤 Pronuncia'
 };
 
@@ -28,6 +29,7 @@ const TYPE_ICONS = {
     'dictation': '🎧',
     'memory': '🃏',
     'speed': '⚡',
+    'velocita_frasi': '⏱️',
     'pronuncia': '🎤'
 };
 
@@ -82,7 +84,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                 'Conversazione': ['roleplay', 'conversazione'],
                 'Dettato': ['dettato', 'dictation'],
                 'Pronuncia': ['pronuncia'],
-                'Velocità': ['speed']
+                'Velocità': ['speed', 'velocita_frasi']
             };
             const targets = map[filter] || [];
             filteredCorrections = corrections.filter(c => targets.includes(c.task.type?.toLowerCase()));
@@ -248,7 +250,7 @@ export const CorrectionsHistoryPage = (navigate, user) => {
             `;
         }
 
-        if (type === 'speed') {
+        if (type === 'speed' || type === 'velocita_frasi') {
             let data = { score: 0, completedIndices: [] };
             try {
                 const src = ans?.data || ans;
@@ -263,25 +265,31 @@ export const CorrectionsHistoryPage = (navigate, user) => {
                 data = { score: Number(ans) || 0, completedIndices: [] };
             }
 
-            const words = c.task.content?.words || [];
+            const isFrasi = type === 'velocita_frasi';
+            const items = isFrasi ? (c.task.content?.sentences || []) : (c.task.content?.words || []);
             const completedIndices = Array.isArray(data.completedIndices) ? data.completedIndices.map(Number) : [];
             const score = data.score || completedIndices.length;
 
             return `
                 <div style="display: flex; flex-direction: column; gap: 2rem;">
                     <div style="font-family: var(--font-body); font-size: 1.8rem; color: var(--color-terracota); font-weight: 700; margin-bottom: 1rem;">
-                        Hai tradotto ${score} parole! ⚡
+                        Hai completato ${score} ${isFrasi ? 'frasi' : 'parole'}! ⚡
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
-                        ${words.map((w, i) => {
+                        ${items.map((w, i) => {
                 const isDone = completedIndices.includes(Number(i));
                 const color = isDone ? '#10b981' : '#ef4444';
                 const bgColor = isDone ? '#f0fdf4' : '#fff1f2';
+                
+                const answerText = isFrasi ? 
+                    ((w.blanks && w.blanks.length > 0) ? w.blanks.join(', ') : (w.blank || '---')) :
+                    (c.task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word));
+
                 return `
                                 <div style="padding: 1.2rem; border-radius: 12px; background: ${bgColor}; border: 1px solid ${color}33; display: flex; flex-direction: column; gap: 0.3rem;">
-                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: var(--color-ink); font-weight: 600;">${c.task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation)}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: var(--color-ink); font-weight: 600;">${isFrasi ? w.text : (c.task.content.direction === 'it-es' ? (w.it || w.word) : (w.es || w.translation))}</div>
                                     <div style="height: 1px; background: ${color}22; margin: 0.2rem 0;"></div>
-                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: ${color}; font-weight: 800;">${c.task.content.direction === 'it-es' ? (w.es || w.translation) : (w.it || w.word)}</div>
+                                    <div style="font-family: var(--font-body); font-size: 1.1rem; color: ${color}; font-weight: 800;">${answerText}</div>
                                 </div>
                             `;
             }).join('')}
